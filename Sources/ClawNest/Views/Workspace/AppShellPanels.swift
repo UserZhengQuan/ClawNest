@@ -22,7 +22,7 @@ struct StatusHeroView: View {
                         if isBusy {
                             Label(localized("Recovery action running", "恢复动作执行中", language: language), systemImage: "hourglass")
                                 .font(.footnote.weight(.semibold))
-                                .foregroundStyle(.white)
+                                .foregroundStyle(AppShellPalette.textPrimary)
                         }
                     }
                 }
@@ -40,7 +40,7 @@ struct StatusHeroView: View {
                         if isBusy {
                             Label(localized("Recovery action running", "恢复动作执行中", language: language), systemImage: "hourglass")
                                 .font(.footnote.weight(.semibold))
-                                .foregroundStyle(.white)
+                                .foregroundStyle(AppShellPalette.textPrimary)
                         }
                     }
                 }
@@ -51,32 +51,36 @@ struct StatusHeroView: View {
         .background(backgroundGradient, in: RoundedRectangle(cornerRadius: ClawNestLayout.Radius.xxLarge, style: .continuous))
         .overlay(
             RoundedRectangle(cornerRadius: ClawNestLayout.Radius.xxLarge, style: .continuous)
-                .stroke(Color.white.opacity(0.08), lineWidth: 1)
+                .stroke(AppShellPalette.border, lineWidth: 1)
         )
     }
 
     private var statusIcon: some View {
         Image(systemName: snapshot.level.iconName)
             .font(.system(size: ClawNestLayout.Typography.statusIcon, weight: .bold))
-            .foregroundStyle(.white)
+            .foregroundStyle(snapshot.level.tintColor)
             .frame(width: ClawNestLayout.Size.statusHeroIconBox, height: ClawNestLayout.Size.statusHeroIconBox)
-            .background(.white.opacity(0.12), in: RoundedRectangle(cornerRadius: ClawNestLayout.Radius.large, style: .continuous))
+            .background(Color.white.opacity(0.72), in: RoundedRectangle(cornerRadius: ClawNestLayout.Radius.large, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: ClawNestLayout.Radius.large, style: .continuous)
+                    .stroke(AppShellPalette.border.opacity(0.7), lineWidth: 1)
+            )
     }
 
     private var statusText: some View {
         VStack(alignment: .leading, spacing: 10) {
             Text(snapshot.level.label(in: language).uppercased())
                 .font(.caption.weight(.bold))
-                .foregroundStyle(.white.opacity(0.72))
+                .foregroundStyle(AppShellPalette.textSecondary)
                 .tracking(2)
 
             Text(snapshot.headline)
                 .font(.system(size: ClawNestLayout.Typography.heroTitle, weight: .bold, design: .rounded))
-                .foregroundStyle(.white)
+                .foregroundStyle(AppShellPalette.textPrimary)
 
             Text(snapshot.detail)
                 .font(.body)
-                .foregroundStyle(.white.opacity(0.82))
+                .foregroundStyle(AppShellPalette.textSecondary)
                 .fixedSize(horizontal: false, vertical: true)
         }
     }
@@ -85,39 +89,39 @@ struct StatusHeroView: View {
         VStack(alignment: alignment, spacing: 3) {
             Text(label)
                 .font(.caption.weight(.semibold))
-                .foregroundStyle(.white.opacity(0.62))
+                .foregroundStyle(AppShellPalette.textTertiary)
             Text(value)
                 .font(.system(.subheadline, design: .monospaced))
-                .foregroundStyle(.white)
+                .foregroundStyle(AppShellPalette.textPrimary)
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 10)
-        .background(.white.opacity(0.12), in: RoundedRectangle(cornerRadius: ClawNestLayout.Radius.small, style: .continuous))
+        .background(Color.white.opacity(0.62), in: RoundedRectangle(cornerRadius: ClawNestLayout.Radius.small, style: .continuous))
     }
 
     private var backgroundGradient: LinearGradient {
         switch snapshot.level {
         case .healthy:
             return LinearGradient(
-                colors: [Color(red: 0.18, green: 0.64, blue: 0.43), Color(red: 0.12, green: 0.36, blue: 0.24)],
+                colors: [Color(red: 0.88, green: 0.96, blue: 0.91), Color(red: 0.84, green: 0.93, blue: 0.88)],
                 startPoint: .topLeading,
                 endPoint: .bottomTrailing
             )
         case .recovering:
             return LinearGradient(
-                colors: [Color(red: 0.16, green: 0.57, blue: 0.84), Color(red: 0.12, green: 0.28, blue: 0.54)],
+                colors: [Color(red: 0.88, green: 0.94, blue: 0.98), Color(red: 0.84, green: 0.90, blue: 0.96)],
                 startPoint: .topLeading,
                 endPoint: .bottomTrailing
             )
         case .degraded:
             return LinearGradient(
-                colors: [Color(red: 0.92, green: 0.58, blue: 0.24), Color(red: 0.56, green: 0.30, blue: 0.14)],
+                colors: [Color(red: 0.98, green: 0.94, blue: 0.86), Color(red: 0.96, green: 0.90, blue: 0.80)],
                 startPoint: .topLeading,
                 endPoint: .bottomTrailing
             )
         case .offline, .missingCLI:
             return LinearGradient(
-                colors: [Color(red: 0.74, green: 0.29, blue: 0.24), Color(red: 0.35, green: 0.12, blue: 0.16)],
+                colors: [Color(red: 0.98, green: 0.91, blue: 0.90), Color(red: 0.96, green: 0.86, blue: 0.85)],
                 startPoint: .topLeading,
                 endPoint: .bottomTrailing
             )
@@ -132,11 +136,11 @@ struct ControlPanelView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 18) {
             PanelHeaderView(
-                title: localized("Claw Actions", "Claw 动作", language: language),
-                subtitle: localized("The current runtime stays recoverable even when the dashboard surface is having a bad day.", "即使 dashboard 状态不好，当前 runtime 仍然可以在这里恢复。", language: language)
+                title: localized("Runtime Actions", "运行时动作", language: language),
+                subtitle: localized("Every surface uses the same action model, so only actions that really make sense for the current local runtime are shown.", "所有界面都使用同一套动作模型，因此这里只会显示当前本地 runtime 真实可执行的动作。", language: language)
             )
 
-            ForEach(model.snapshot.suggestedActions) { action in
+            ForEach(model.runtimeActions) { action in
                 Button {
                     model.perform(action)
                 } label: {
@@ -144,24 +148,24 @@ struct ControlPanelView: View {
                         Image(systemName: action.systemImage)
                             .font(.title3)
                             .frame(width: 28)
-                            .foregroundStyle(.white)
+                            .foregroundStyle(AppShellPalette.textSecondary)
 
                         VStack(alignment: .leading, spacing: 4) {
                             Text(action.title(in: language))
                                 .font(.headline)
-                                .foregroundStyle(.white)
+                                .foregroundStyle(AppShellPalette.textPrimary)
                             Text(action.subtitle(in: language))
                                 .font(.caption)
-                                .foregroundStyle(.white.opacity(0.62))
+                                .foregroundStyle(AppShellPalette.textSecondary)
                                 .fixedSize(horizontal: false, vertical: true)
                         }
                         Spacer()
                     }
                     .padding(14)
-                    .background(Color.white.opacity(0.05), in: RoundedRectangle(cornerRadius: ClawNestLayout.Radius.medium, style: .continuous))
+                    .background(AppShellPalette.subtleFill, in: RoundedRectangle(cornerRadius: ClawNestLayout.Radius.medium, style: .continuous))
                 }
                 .buttonStyle(.plain)
-                .disabled(model.isBusy && action != .openDashboard && action != .revealLogs && action != .openInstallGuide)
+                .disabled(!model.isActionEnabled(action))
             }
         }
         .padding(ClawNestLayout.Spacing.large + 2)
@@ -186,15 +190,15 @@ struct MetricsPanelView: View {
                     VStack(alignment: .leading, spacing: 8) {
                         Text(metric.label)
                             .font(.caption.weight(.semibold))
-                            .foregroundStyle(.white.opacity(0.52))
+                            .foregroundStyle(AppShellPalette.textTertiary)
                         Text(metric.value)
                             .font(.system(.body, design: .monospaced))
-                            .foregroundStyle(.white)
+                            .foregroundStyle(AppShellPalette.textPrimary)
                             .lineLimit(4)
                             .frame(maxWidth: .infinity, alignment: .leading)
                     }
                     .padding(16)
-                    .background(Color.white.opacity(0.05), in: RoundedRectangle(cornerRadius: ClawNestLayout.Radius.medium, style: .continuous))
+                    .background(AppShellPalette.subtleFill, in: RoundedRectangle(cornerRadius: ClawNestLayout.Radius.medium, style: .continuous))
                 }
             }
         }
@@ -249,45 +253,61 @@ struct DashboardPanelView: View {
 
     @ViewBuilder
     private var overlayView: some View {
-        RoundedRectangle(cornerRadius: ClawNestLayout.Radius.large, style: .continuous)
-            .fill(.black.opacity(0.56))
+        overlayBackground
             .overlay {
-                VStack(spacing: 14) {
-                    Image(systemName: overlayIcon)
-                        .font(.system(size: ClawNestLayout.Typography.overlayIcon, weight: .semibold))
-                        .foregroundStyle(.white)
-
-                    Text(overlayTitle)
-                        .font(.title3.bold())
-                        .foregroundStyle(.white)
-
-                    Text(overlayMessage)
-                        .font(.body)
-                        .foregroundStyle(.white.opacity(0.82))
-                        .multilineTextAlignment(.center)
-                        .frame(maxWidth: ClawNestLayout.Size.overlayTextWidth)
-
-                    FlowLayout(spacing: 12, rowSpacing: 12) {
-                        Button(localized("Reload Surface", "重新加载界面", language: language)) {
-                            model.reloadDashboard()
-                        }
-                        .buttonStyle(.borderedProminent)
-
-                        if model.snapshot.level != .missingCLI {
-                            Button(localized("Restart Gateway", "重启网关", language: language)) {
-                                model.perform(.restartGateway)
-                            }
-                            .buttonStyle(.bordered)
-                        } else {
-                            Button(localized("Open Install Guide", "打开安装指南", language: language)) {
-                                model.perform(.openInstallGuide)
-                            }
-                            .buttonStyle(.bordered)
-                        }
-                    }
-                }
-                .padding(ClawNestLayout.Spacing.xLarge)
+                overlayContent
             }
+    }
+
+    private var overlayBackground: some View {
+        RoundedRectangle(cornerRadius: ClawNestLayout.Radius.large, style: .continuous)
+            .fill(Color.white.opacity(0.84))
+            .overlay(
+                RoundedRectangle(cornerRadius: ClawNestLayout.Radius.large, style: .continuous)
+                    .stroke(AppShellPalette.border, lineWidth: 1)
+            )
+    }
+
+    private var overlayContent: some View {
+        VStack(spacing: 14) {
+            Image(systemName: overlayIcon)
+                .font(.system(size: ClawNestLayout.Typography.overlayIcon, weight: .semibold))
+                .foregroundStyle(AppShellPalette.textPrimary)
+
+            Text(overlayTitle)
+                .font(.title3.bold())
+                .foregroundStyle(AppShellPalette.textPrimary)
+
+            Text(overlayMessage)
+                .font(.body)
+                .foregroundStyle(AppShellPalette.textSecondary)
+                .multilineTextAlignment(.center)
+                .frame(maxWidth: ClawNestLayout.Size.overlayTextWidth)
+
+            FlowLayout(spacing: 12, rowSpacing: 12) {
+                ForEach(Array(model.overlayRuntimeActions.enumerated()), id: \.element.id) { index, action in
+                    overlayActionButton(action, isPrimary: index == 0)
+                }
+            }
+        }
+        .padding(ClawNestLayout.Spacing.xLarge)
+    }
+
+    @ViewBuilder
+    private func overlayActionButton(_ action: RuntimeAction, isPrimary: Bool) -> some View {
+        if isPrimary {
+            Button(action.title(in: language)) {
+                model.perform(action)
+            }
+            .buttonStyle(BorderedProminentButtonStyle())
+            .disabled(!model.isActionEnabled(action))
+        } else {
+            Button(action.title(in: language)) {
+                model.perform(action)
+            }
+            .buttonStyle(BorderedButtonStyle())
+            .disabled(!model.isActionEnabled(action))
+        }
     }
 
     private var overlayIcon: String {
@@ -326,13 +346,13 @@ struct ActivityFeedView: View {
         VStack(alignment: .leading, spacing: 18) {
             PanelHeaderView(
                 title: localized("Caretaker Notes", "守护者笔记", language: language),
-                subtitle: localized("The same diagnostics stream, softened into readable updates.", "同一条诊断流，用更可读的方式呈现。", language: language)
+                subtitle: localized("A readable timeline of the actual diagnostics stream for this local runtime.", "把这个本地 runtime 的真实诊断流整理成可读时间线。", language: language)
             )
 
             if entries.isEmpty {
-                Text(localized("No moments yet.", "还没有动态。", language: language))
+                Text(localized("No diagnostics yet.", "还没有诊断记录。", language: language))
                     .font(.subheadline)
-                    .foregroundStyle(.white.opacity(0.56))
+                    .foregroundStyle(AppShellPalette.textTertiary)
             } else {
                 LazyVStack(spacing: 12) {
                     ForEach(entries) { entry in
@@ -340,21 +360,21 @@ struct ActivityFeedView: View {
                             HStack {
                                 Text(entry.title)
                                     .font(.headline)
-                                    .foregroundStyle(.white)
+                                    .foregroundStyle(AppShellPalette.textPrimary)
                                 Spacer()
                                 Text(entry.timestamp.formatted(date: .omitted, time: .standard))
                                     .font(.caption.monospaced())
-                                    .foregroundStyle(.white.opacity(0.48))
+                                    .foregroundStyle(AppShellPalette.textTertiary)
                             }
 
                             Text(entry.message)
                                 .font(.subheadline)
-                                .foregroundStyle(.white.opacity(0.68))
+                                .foregroundStyle(AppShellPalette.textSecondary)
 
                             if let command = entry.command {
                                 Text(command)
                                     .font(.caption.monospaced())
-                                    .foregroundStyle(.white.opacity(0.52))
+                                    .foregroundStyle(AppShellPalette.textTertiary)
                             }
                         }
                         .padding(16)
@@ -372,13 +392,13 @@ struct ActivityFeedView: View {
     private func backgroundColor(for level: DiagnosticLevel) -> Color {
         switch level {
         case .success:
-            return Color(red: 0.12, green: 0.25, blue: 0.18).opacity(0.88)
+            return Color(red: 0.89, green: 0.96, blue: 0.91)
         case .info:
-            return Color.white.opacity(0.04)
+            return AppShellPalette.subtleFill
         case .warning:
-            return Color(red: 0.27, green: 0.19, blue: 0.08).opacity(0.92)
+            return Color(red: 0.98, green: 0.94, blue: 0.86)
         case .error:
-            return Color(red: 0.29, green: 0.11, blue: 0.13).opacity(0.92)
+            return Color(red: 0.98, green: 0.91, blue: 0.90)
         }
     }
 }
@@ -393,26 +413,30 @@ struct LatestLogView: View {
         VStack(alignment: .leading, spacing: 18) {
             PanelHeaderView(
                 title: localized("Latest Log + Raw Probe", "最新日志与原始探测", language: language),
-                subtitle: localized("The honest, unsoftened technical layer is still one glance away.", "最原始、最技术化的信息依然随时可看。", language: language)
+                subtitle: localized("Raw logs and probe output stay visible so the workbench never hides the underlying runtime state.", "原始日志和探测结果始终可见，工作台不会把底层 runtime 状态藏起来。", language: language)
             )
 
             VStack(alignment: .leading, spacing: 10) {
                 Text(summary?.path ?? localized("No OpenClaw log file was found under /tmp/openclaw yet.", "在 /tmp/openclaw 下还没有找到 OpenClaw 日志。", language: language))
                     .font(.caption.monospaced())
-                    .foregroundStyle(.white.opacity(0.52))
+                    .foregroundStyle(AppShellPalette.textTertiary)
                 Divider()
-                    .overlay(Color.white.opacity(0.08))
+                    .overlay(AppShellPalette.divider)
                 ScrollView {
                     Text(summary?.excerpt ?? (rawProbe.isEmpty ? localized("No log excerpt or raw probe payload is available yet.", "还没有日志摘录或原始探测内容。", language: language) : rawProbe))
                         .font(.system(.callout, design: .monospaced))
-                        .foregroundStyle(.white)
+                        .foregroundStyle(AppShellPalette.textPrimary)
                         .textSelection(.enabled)
                         .frame(maxWidth: .infinity, alignment: .leading)
                 }
                 .frame(minHeight: logMinHeight)
             }
             .padding(ClawNestLayout.Spacing.large - 2)
-            .background(Color.black.opacity(0.84), in: RoundedRectangle(cornerRadius: ClawNestLayout.Radius.medium + 2, style: .continuous))
+            .background(AppShellPalette.codeBackground, in: RoundedRectangle(cornerRadius: ClawNestLayout.Radius.medium + 2, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: ClawNestLayout.Radius.medium + 2, style: .continuous)
+                    .stroke(AppShellPalette.border.opacity(0.8), lineWidth: 1)
+            )
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(ClawNestLayout.Spacing.large + 2)
@@ -451,7 +475,7 @@ struct ConfigurationEditorView: View {
         VStack(alignment: .leading, spacing: 18) {
             PanelHeaderView(
                 title: localized("Current Runtime Settings", "当前运行时设置", language: language),
-                subtitle: localized("The technical knobs stay editable, but they now live behind the active Claw instead of taking over the whole app.", "技术参数依然可编辑，只是现在放到了活动 Claw 后面，而不是占满整个应用。", language: language)
+                subtitle: localized("These settings only affect the current local OpenClaw runtime that this workbench is attached to.", "这些设置只影响当前工作台连接的本地 OpenClaw runtime。", language: language)
             )
 
             Group {
@@ -503,23 +527,23 @@ struct ConfigurationEditorView: View {
         VStack(alignment: .leading, spacing: 14) {
             Text(localized("Probe interval", "探测间隔", language: language))
                 .font(.caption.weight(.semibold))
-                .foregroundStyle(.white.opacity(0.56))
+                .foregroundStyle(AppShellPalette.textTertiary)
 
             HStack {
                 Slider(value: $draft.probeIntervalSeconds, in: 15 ... 180, step: 15)
                 Text("\(Int(draft.probeIntervalSeconds))s")
                     .font(.system(.body, design: .monospaced))
-                    .foregroundStyle(.white)
+                    .foregroundStyle(AppShellPalette.textPrimary)
                     .frame(width: ClawNestLayout.Size.sliderValueWidth)
             }
 
             Toggle(localized("Allow automatic gateway restart after repeated offline probes", "连续离线探测后允许自动重启网关", language: language), isOn: $draft.autoRestartEnabled)
                 .toggleStyle(.switch)
-                .foregroundStyle(.white)
+                .foregroundStyle(AppShellPalette.textPrimary)
 
             Text(localized("Still off by default. Leave it disabled if OpenClaw TUI and WebUI are already healthy and you only want passive monitoring.", "默认仍然关闭。如果 OpenClaw 的 TUI 和 WebUI 已经稳定，同时你只想被动监控，就继续保持关闭。", language: language))
                 .font(.caption)
-                .foregroundStyle(.white.opacity(0.56))
+                .foregroundStyle(AppShellPalette.textTertiary)
                 .fixedSize(horizontal: false, vertical: true)
         }
     }
@@ -528,7 +552,7 @@ struct ConfigurationEditorView: View {
         VStack(alignment: .leading, spacing: 6) {
             Text(title)
                 .font(.caption.weight(.semibold))
-                .foregroundStyle(.white.opacity(0.56))
+                .foregroundStyle(AppShellPalette.textTertiary)
             TextField(title, text: text)
                 .textFieldStyle(.roundedBorder)
                 .font(.system(.body, design: .monospaced))

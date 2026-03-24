@@ -1,65 +1,13 @@
 import Foundation
-struct ReservedPort: Identifiable, Equatable, Codable, Sendable {
-    let port: Int
-    let purpose: String
 
-    var id: Int { port }
-}
-
-struct OpenClawInstallDraft: Equatable, Sendable {
-    var installDirectoryPath: String
-    var gatewayPortText: String
-
-    static func suggestedDefault() -> OpenClawInstallDraft {
-        let baseDirectory = FileManager.default.homeDirectoryForCurrentUser
-            .appendingPathComponent("ClawNest", isDirectory: true)
-            .appendingPathComponent("openclaw-19789", isDirectory: true)
-
-        return OpenClawInstallDraft(
-            installDirectoryPath: baseDirectory.path,
-            gatewayPortText: "19789"
-        )
-    }
-}
-
-struct OpenClawInstallPreview: Equatable, Sendable {
-    let installDirectoryPath: String
-    let stateDirectoryPath: String
-    let workspaceDirectoryPath: String
-    let logsDirectoryPath: String
-    let configPath: String
-    let launchAgentLabel: String
-    let reservedPorts: [ReservedPort]
-}
-
-struct OpenClawInstallValidation: Equatable, Sendable {
-    let isValid: Bool
+struct OpenClawInstallerSnapshot: Equatable, Sendable {
+    let resolvedCommandPath: String?
     let message: String
-    let preview: OpenClawInstallPreview?
+    let nextStep: String
 
-    static let idle = OpenClawInstallValidation(
-        isValid: false,
-        message: "Choose an install directory and a unique gateway port.",
-        preview: nil
-    )
-}
-
-struct InstalledOpenClawInstance: Codable, Identifiable, Equatable, Sendable {
-    let installDirectoryPath: String
-    let stateDirectoryPath: String
-    let workspaceDirectoryPath: String
-    let gatewayPort: Int
-    let launchAgentLabel: String
-    let dashboardURLString: String
-    let reservedPorts: [Int]
-    let installedAt: Date
-
-    var id: String { installDirectoryPath }
-}
-
-struct OpenClawInstallerSnapshot: Sendable {
-    let validation: OpenClawInstallValidation
-    let knownInstances: [InstalledOpenClawInstance]
+    var isInstalled: Bool {
+        resolvedCommandPath != nil
+    }
 }
 
 struct OpenClawInstallResult: Sendable {
@@ -70,12 +18,10 @@ struct OpenClawInstallResult: Sendable {
 enum OpenClawInstallError: LocalizedError {
     case installScriptFailed(String)
     case missingOpenClawBinary
-    case filesystemFailure(String)
 
     var errorDescription: String? {
         switch self {
-        case let .installScriptFailed(message),
-             let .filesystemFailure(message):
+        case let .installScriptFailed(message):
             return message
         case .missingOpenClawBinary:
             return "OpenClaw finished installing, but the `openclaw` executable still could not be found."
@@ -105,46 +51,49 @@ private struct OpenClawInstallFailureContext: Sendable {
 
 actor OpenClawInstaller {
     private let runner: CommandRunning
-    private let registryStore: InstalledOpenClawInstanceStoring
 
-    init(
-        runner: CommandRunning = ProcessCommandRunner(),
-        registryStore: InstalledOpenClawInstanceStoring = UserDefaultsInstalledOpenClawInstanceStore(),
-        portInspector: PortInspector = PortInspector(),
-        homeDirectory: URL = FileManager.default.homeDirectoryForCurrentUser
-    ) {
-        _ = portInspector
-        _ = homeDirectory
+    init(runner: CommandRunning = ProcessCommandRunner()) {
         self.runner = runner
-        self.registryStore = registryStore
     }
 
-    func snapshot(for draft: OpenClawInstallDraft) -> OpenClawInstallerSnapshot {
-        _ = draft
-        let knownInstances = registryStore.load().sorted { $0.gatewayPort < $1.gatewayPort }
+    func snapshot(currentCommand: String) async -> OpenClawInstallerSnapshot {
+        let configuredPath = await resolveExecutable(for: currentCommand)
+        let defaultPath = currentCommand == "openclaw" ? configuredPath : await resolveExecutable(for: "openclaw")
+        let resolvedPath = configuredPath ?? defaultPath
+
+        if let resolvedPath {
+            if configuredPath == nil, currentCommand != "openclaw" {
+                return OpenClawInstallerSnapshot(
+                    resolvedCommandPath: resolvedPath,
+                    message: "OpenClaw CLI is installed, but the current runtime command `\(currentCommand)` did not resolve.",
+                    nextStep: "Update the runtime command to the detected CLI path, then continue with dashboard, logs, and repair flows from this workspace."
+                )
+            }
+
+            return OpenClawInstallerSnapshot(
+                resolvedCommandPath: resolvedPath,
+                message: "OpenClaw CLI is installed and ready for the local Claw workspace.",
+                nextStep: "Use this workspace to refresh health, run repair, open the dashboard, or continue with `openclaw onboard --install-daemon` if first-run setup is still pending."
+            )
+        }
 
         return OpenClawInstallerSnapshot(
-            validation: OpenClawInstallValidation(
-                isValid: true,
-                message: "ClawNest will install or reuse the official OpenClaw CLI. After that, continue with `openclaw onboard --install-daemon` to configure workspace, gateway, and the LaunchAgent the official way.",
-                preview: nil
-            ),
-            knownInstances: knownInstances
+            resolvedCommandPath: nil,
+            message: "OpenClaw CLI is not installed yet.",
+            nextStep: "Install it here, then continue with `openclaw onboard --install-daemon` for the official onboarding flow."
         )
     }
 
     func install(
-        draft: OpenClawInstallDraft,
         progressRelay: OpenClawInstallProgressRelay? = nil
     ) async throws -> OpenClawInstallResult {
-        _ = draft
         let outcome = try await ensureOpenClawInstalled(progressRelay: progressRelay)
         let summary: String
 
         if outcome.reusedExistingInstall {
             summary = "OpenClaw CLI is already available at \(outcome.executablePath). ClawNest reused that command and skipped the official installer."
         } else {
-            summary = "OpenClaw CLI is installed and available to system terminals. Continue with `openclaw onboard --install-daemon` to configure the gateway and background service the official way."
+            summary = "OpenClaw CLI is installed and available to system terminals. Continue with `openclaw onboard --install-daemon` to finish the official onboarding and background-service setup."
         }
 
         return OpenClawInstallResult(
@@ -245,7 +194,7 @@ actor OpenClawInstaller {
             )
         )
 
-        if let installedExecutable = await resolveExecutable(named: "openclaw") {
+        if let installedExecutable = await resolveExecutable(for: "openclaw") {
             return OpenClawInstallOutcome(
                 executablePath: installedExecutable,
                 reusedExistingInstall: false
@@ -264,9 +213,9 @@ actor OpenClawInstaller {
     }
 
     private func inspectEnvironment() async -> OpenClawEnvironmentState {
-        async let openClawPath = resolveExecutable(named: "openclaw")
+        async let openClawPath = resolveExecutable(for: "openclaw")
         async let developerToolsPath = resolveDeveloperToolsPath()
-        async let homebrewPath = resolveExecutable(named: "brew")
+        async let homebrewPath = resolveExecutable(for: "brew")
 
         return await OpenClawEnvironmentState(
             existingOpenClawPath: openClawPath,
@@ -275,10 +224,18 @@ actor OpenClawInstaller {
         )
     }
 
-    private func resolveExecutable(named binary: String) async -> String? {
+    private func resolveExecutable(for command: String) async -> String? {
+        let trimmedCommand = command.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmedCommand.isEmpty else { return nil }
+
+        let expandedPath = NSString(string: trimmedCommand).expandingTildeInPath
+        if expandedPath.contains("/") {
+            return FileManager.default.isExecutableFile(atPath: expandedPath) ? expandedPath : nil
+        }
+
         let result = await runner.run(
             command: "/bin/zsh",
-            arguments: ["-lc", "command -v \(binary)"]
+            arguments: ["-lc", "command -v \(shellQuoted(trimmedCommand))"]
         )
 
         guard result.exitCode == 0 else { return nil }
@@ -363,6 +320,10 @@ actor OpenClawInstaller {
             recoverySuggestion: "Review the installer output below, resolve the blocking issue, then retry Install OpenClaw."
         )
     }
+
+    private func shellQuoted(_ value: String) -> String {
+        "'\(value.replacingOccurrences(of: "'", with: "'\\''"))'"
+    }
 }
 
 private final class OpenClawInstallStageTracker: @unchecked Sendable {
@@ -442,9 +403,9 @@ private final class OpenClawInstallStageTracker: @unchecked Sendable {
         defer { lock.unlock() }
 
         if !developerToolsResolved,
-           (normalizedOutput.contains("xcode-select") ||
+           normalizedOutput.contains("xcode-select") ||
             normalizedOutput.contains("command line tools") ||
-            normalizedOutput.contains("developer tools")) {
+            normalizedOutput.contains("developer tools") {
             activateLocked(
                 .installingDeveloperTools,
                 detail: "The official installer is waiting on Apple Command Line Tools. Finish the macOS dialog, then the install can continue."
@@ -452,10 +413,10 @@ private final class OpenClawInstallStageTracker: @unchecked Sendable {
         }
 
         if !homebrewResolved,
-           (normalizedOutput.contains("homebrew") ||
+           normalizedOutput.contains("homebrew") ||
             normalizedOutput.contains("brew install") ||
             normalizedOutput.contains("/opt/homebrew") ||
-            normalizedOutput.contains("/usr/local/homebrew")) {
+            normalizedOutput.contains("/usr/local/homebrew") {
             if !developerToolsResolved && !initialEnvironment.hasHomebrew {
                 completeLocked(
                     .installingDeveloperTools,
@@ -560,83 +521,6 @@ private final class OpenClawInstallStageTracker: @unchecked Sendable {
             currentActiveStage = nil
         }
         progressRelay?.send(.skip(stage: stage, detail: detail))
-    }
-}
-
-protocol InstalledOpenClawInstanceStoring {
-    func load() -> [InstalledOpenClawInstance]
-    func save(_ instances: [InstalledOpenClawInstance])
-    func upsert(_ instance: InstalledOpenClawInstance)
-}
-
-struct UserDefaultsInstalledOpenClawInstanceStore: InstalledOpenClawInstanceStoring {
-    private let defaults: UserDefaults
-
-    init(defaults: UserDefaults = .standard) {
-        self.defaults = defaults
-    }
-
-    func load() -> [InstalledOpenClawInstance] {
-        guard let data = defaults.data(forKey: Keys.instances),
-              let instances = try? JSONDecoder().decode([InstalledOpenClawInstance].self, from: data)
-        else {
-            return []
-        }
-
-        return instances
-    }
-
-    func save(_ instances: [InstalledOpenClawInstance]) {
-        guard let data = try? JSONEncoder().encode(instances) else { return }
-        defaults.set(data, forKey: Keys.instances)
-    }
-
-    func upsert(_ instance: InstalledOpenClawInstance) {
-        var instances = load()
-
-        if let existingIndex = instances.firstIndex(where: { $0.id == instance.id }) {
-            instances[existingIndex] = instance
-        } else {
-            instances.append(instance)
-        }
-
-        save(instances.sorted { $0.gatewayPort < $1.gatewayPort })
-    }
-}
-
-private enum Keys {
-    static let instances = "clawnest.installedOpenClawInstances"
-}
-
-struct PortInspector {
-    private let availabilityProbe: @Sendable (Int) -> Bool
-
-    init(availabilityProbe: @escaping @Sendable (Int) -> Bool = PortInspector.defaultAvailabilityProbe(_:)) {
-        self.availabilityProbe = availabilityProbe
-    }
-
-    func unavailableReservations(in reservations: [ReservedPort]) -> [ReservedPort] {
-        reservations.filter { !availabilityProbe($0.port) }
-    }
-
-    private static func defaultAvailabilityProbe(_ port: Int) -> Bool {
-        let socketDescriptor = socket(AF_INET, SOCK_STREAM, 0)
-        guard socketDescriptor >= 0 else { return false }
-        defer { close(socketDescriptor) }
-
-        var address = sockaddr_in()
-        address.sin_len = UInt8(MemoryLayout<sockaddr_in>.stride)
-        address.sin_family = sa_family_t(AF_INET)
-        address.sin_port = in_port_t(UInt16(port).bigEndian)
-        address.sin_addr = in_addr(s_addr: inet_addr("127.0.0.1"))
-
-        let bindResult = withUnsafePointer(to: &address) { pointer in
-            pointer.withMemoryRebound(to: sockaddr.self, capacity: 1) { reboundPointer in
-                bind(socketDescriptor, reboundPointer, socklen_t(MemoryLayout<sockaddr_in>.stride))
-            }
-        }
-
-        return bindResult == 0
     }
 }
 

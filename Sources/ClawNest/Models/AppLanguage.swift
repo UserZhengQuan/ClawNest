@@ -51,42 +51,42 @@ extension GatewayStatusLevel {
     }
 }
 
-extension RecoveryAction {
+extension RuntimeAction {
     func title(in language: AppLanguage) -> String {
         switch self {
-        case .refresh:
-            return localized("Refresh", "刷新", language: language)
+        case .install:
+            return localized("Install OpenClaw CLI", "安装 OpenClaw CLI", language: language)
+        case .repair:
+            return localized("Run Repair", "执行修复", language: language)
+        case .start:
+            return localized("Start OpenClaw", "启动 OpenClaw", language: language)
+        case .restart:
+            return localized("Restart OpenClaw", "重启 OpenClaw", language: language)
         case .openDashboard:
             return localized("Open Dashboard", "打开面板", language: language)
-        case .restartGateway:
-            return localized("Restart Gateway", "重启网关", language: language)
-        case .installLaunchAgent:
-            return localized("Install Agent", "安装代理", language: language)
-        case .repairConfiguration:
-            return localized("Run Repair", "执行修复", language: language)
         case .revealLogs:
             return localized("Reveal Logs", "查看日志", language: language)
-        case .openInstallGuide:
-            return localized("Install Guide", "安装指南", language: language)
+        case .refreshStatus:
+            return localized("Refresh Status", "刷新状态", language: language)
         }
     }
 
     func subtitle(in language: AppLanguage) -> String {
         switch self {
-        case .refresh:
-            return localized("Probe the gateway again.", "重新探测网关状态。", language: language)
+        case .install:
+            return localized("Install or reuse the official OpenClaw CLI.", "安装或复用官方 OpenClaw CLI。", language: language)
+        case .repair:
+            return localized("Run `openclaw doctor --repair --non-interactive`.", "执行 `openclaw doctor --repair --non-interactive`。", language: language)
+        case .start:
+            return localized("Kick the current launchd job to bring the local runtime up.", "通过当前 launchd 任务把本地 runtime 拉起。", language: language)
+        case .restart:
+            return localized("Restart the local OpenClaw runtime through launchd.", "通过 launchd 重启本地 OpenClaw runtime。", language: language)
         case .openDashboard:
             return localized("Open the dashboard surface in your browser.", "在浏览器中打开仪表盘。", language: language)
-        case .restartGateway:
-            return localized("Kick the launch agent without a terminal.", "无需终端即可重启 LaunchAgent。", language: language)
-        case .installLaunchAgent:
-            return localized("Install or refresh the per-user LaunchAgent.", "安装或刷新当前用户的 LaunchAgent。", language: language)
-        case .repairConfiguration:
-            return localized("Run `openclaw doctor --repair`.", "执行 `openclaw doctor --repair`。", language: language)
         case .revealLogs:
             return localized("Open the latest local OpenClaw logs.", "打开本地最新 OpenClaw 日志。", language: language)
-        case .openInstallGuide:
-            return localized("Open the official setup guide.", "打开官方安装指引。", language: language)
+        case .refreshStatus:
+            return localized("Probe the local runtime again and refresh the dashboard surface.", "重新探测本地 runtime，并刷新 dashboard 界面。", language: language)
         }
     }
 }

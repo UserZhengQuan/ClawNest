@@ -31,17 +31,16 @@ struct MenuBarContentView: View {
             }
 
             VStack(spacing: 8) {
-                quickAction(.refresh)
-                quickAction(.restartGateway)
-                quickAction(.openDashboard)
-                quickAction(.revealLogs)
+                ForEach(model.runtimeActions) { action in
+                    quickAction(action)
+                }
             }
         }
         .padding(ClawNestLayout.Spacing.medium)
         .frame(width: ClawNestLayout.Size.menuBarWidth)
     }
 
-    private func quickAction(_ action: RecoveryAction) -> some View {
+    private func quickAction(_ action: RuntimeAction) -> some View {
         Button {
             model.perform(action)
         } label: {
@@ -49,6 +48,6 @@ struct MenuBarContentView: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
         }
         .buttonStyle(.bordered)
-        .disabled(model.isBusy && action != .openDashboard && action != .revealLogs)
+        .disabled(!model.isActionEnabled(action))
     }
 }

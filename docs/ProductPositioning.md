@@ -1,71 +1,45 @@
 # Product Positioning
 
-## Reference
+## One-Line Product Definition
 
-As of March 23, 2026, ClawNest is informed by two public projects:
+ClawNest is a macOS local OpenClaw workstation for installing the OpenClaw CLI, monitoring runtime health, and repairing a local OpenClaw runtime.
 
-- [openclaw-control-center](https://github.com/TianyiDataScience/openclaw-control-center)
-- [nexu](https://github.com/nexu-io/nexu)
+## Core Capabilities
 
-They are useful because together they prove there is real demand for:
+- Install or verify the OpenClaw CLI
+- Monitor local runtime health using `openclaw health --json`
+- Run repair, start, and restart actions for the local runtime
+- Open the local dashboard and reveal local logs
+- Provide menu bar status and quick actions for the same runtime
 
-- better OpenClaw observability
-- human-readable health status
-- one place to inspect issues without living in Terminal
-- a pure GUI setup path
-- a desktop distribution model people can actually install and try
+## Explicit Non-Goals
 
-Their public positioning also highlights product choices worth preserving in spirit:
+- Becoming an AI agent platform
+- Becoming a multi-instance orchestration system
+- Managing remote runtimes or remote agents
+- Replacing the official `openclaw onboard --install-daemon` onboarding flow
+- Introducing placeholder product areas or workflows without real OpenClaw backing functionality
 
-- local-first operation
-- safety-first defaults, including read-only posture unless mutation is intentional
-- double-click install instead of environment-first setup
-- user-facing polish around packaging and onboarding
+## Intended User
 
-## Where ClawNest diverges
+ClawNest is for a macOS user who runs OpenClaw locally and wants a native place to install or verify the CLI, inspect runtime status, and recover without living in Terminal.
 
-ClawNest is not trying to become a browser dashboard for maintainers, and it is not trying to replicate nexu's broader Electron plus controller plus web stack either.
+## Current Scope of ClawNest
 
-It is a native macOS companion for ordinary operators who mostly need four things:
+- One local OpenClaw runtime on the current Mac
+- One main `Claw` workspace plus a menu bar surface
+- Runtime health, diagnostics, dashboard access, local logs, and runtime settings
+- Repair-oriented actions grounded in OpenClaw capabilities that exist today
+- CLI installation and verification, plus explicit handoff to official onboarding for first-run setup
 
-1. know whether OpenClaw is healthy
-2. recover quickly when it is not
-3. understand what failed in plain language
-4. avoid touching Terminal unless the app itself cannot proceed
+## Product Rule
 
-That pushes the product toward a much narrower surface:
+Any new UI surface or workflow added to ClawNest must map to a real OpenClaw capability.
 
-- menu bar status
-- one main health overview
-- one diagnostics view
-- one embedded dashboard shell for compatibility
-- a short list of native repair actions
+Do not introduce placeholder product areas (Chat, Moments, etc.) without real backing functionality.
 
-## Product rules
+## Scope Guardrails
 
-When making future feature decisions, prefer the option that reduces operator burden.
-
-Good additions:
-
-- setup checks
-- permissions guidance
-- launchd visibility
-- reconnect history
-- token/auth mismatch hints
-- native summaries of the most common blocked states
-
-Bad additions:
-
-- generic admin dashboards
-- large multi-page information architecture
-- direct exposure of internal OpenClaw objects unless they are needed for recovery
-- features that assume the user already understands sessions, relays, memory stores, or file layouts
-- architecture sprawl before the user experience proves it is necessary
-
-## UX test
-
-Every new screen should pass this test:
-
-"If the dashboard is disconnected and the user has zero Terminal context, can they still tell what broke and what to do next?"
-
-If the answer is no, the feature is not aligned with ClawNest.
+- If the underlying OpenClaw capability does not exist, ClawNest should not invent a product shell for it.
+- If a workflow is still manual in OpenClaw, ClawNest may guide or hand off to it, but should not claim that the app fully owns it.
+- Prefer fewer honest surfaces over broader but misleading information architecture.

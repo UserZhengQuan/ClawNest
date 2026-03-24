@@ -5,75 +5,60 @@ struct OpenClawInstallView: View {
     let language: AppLanguage
     let layout: WorkspaceLayoutMetrics
 
-    private var directoryBinding: Binding<String> {
-        Binding(
-            get: { model.installDraft.installDirectoryPath },
-            set: { model.updateInstallDirectoryPath($0) }
-        )
-    }
-
-    private var portBinding: Binding<String> {
-        Binding(
-            get: { model.installDraft.gatewayPortText },
-            set: { model.updateInstallPortText($0) }
-        )
-    }
-
     var body: some View {
         VStack(alignment: .leading, spacing: 18) {
-            PanelHeaderView(
-                title: localized("Grow the Nest", "扩展巢", language: language),
-                subtitle: localized("Install another OpenClaw with its own home, its own gateway port, and its own LaunchAgent label.", "安装另一个 OpenClaw，为它分配独立目录、独立网关端口和独立 LaunchAgent 标签。", language: language)
-            )
-
-            Group {
-                if layout.formStacksVertically {
-                    VStack(alignment: .leading, spacing: 20) {
-                        installDirectoryField
-                        portField
-                    }
-                } else {
-                    HStack(alignment: .top, spacing: 20) {
-                        installDirectoryField
-                        portField
-                    }
-                }
-            }
-
-            validationBanner
-
-            if let preview = model.installValidation.preview {
-                installPreview(preview)
-            }
-
+            header
+            statusBanner
+            detailsSection
+            nextStepSection
             installProgressSection
-
-            if !model.knownOpenClawInstances.isEmpty {
-                knownInstances
-            }
-
-            Group {
-                if layout.formStacksVertically {
-                    VStack(alignment: .leading, spacing: 12) {
-                        installButton
-                        Text(localized("Every install gets its own state, workspace, and reserved port range.", "每次安装都会创建独立 state、workspace 和保留端口范围。", language: language))
-                            .font(.caption)
-                            .foregroundStyle(.white.opacity(0.56))
-                            .fixedSize(horizontal: false, vertical: true)
-                    }
-                } else {
-                    HStack(spacing: 12) {
-                        installButton
-                        Text(localized("Every install gets its own state, workspace, and reserved port range.", "每次安装都会创建独立 state、workspace 和保留端口范围。", language: language))
-                            .font(.caption)
-                            .foregroundStyle(.white.opacity(0.56))
-                            .fixedSize(horizontal: false, vertical: true)
-                    }
-                }
-            }
+            installStatusSection
+            actionSection
         }
         .padding(ClawNestLayout.Spacing.large + 2)
         .shellPanelBackground()
+    }
+
+    private var header: some View {
+        PanelHeaderView(
+            title: localized("OpenClaw CLI", "OpenClaw CLI", language: language),
+            subtitle: localized("This workbench only installs or verifies the OpenClaw CLI. Workspace, gateway, and launchd onboarding stay in the official `openclaw onboard --install-daemon` flow.", "这个工作台只负责安装或校验 OpenClaw CLI。workspace、gateway 和 launchd onboarding 仍然走官方 `openclaw onboard --install-daemon` 流程。", language: language)
+        )
+    }
+
+    private var statusBanner: some View {
+        Text(model.installSnapshot.message)
+            .font(.subheadline.weight(.medium))
+            .foregroundStyle(AppShellPalette.textPrimary)
+            .padding(14)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(
+                (model.installSnapshot.isInstalled
+                    ? Color(red: 0.89, green: 0.96, blue: 0.91)
+                    : Color(red: 0.98, green: 0.91, blue: 0.90)),
+                in: RoundedRectangle(cornerRadius: ClawNestLayout.Radius.medium - 2, style: .continuous)
+            )
+    }
+
+    private var cliActions: [RuntimeAction] {
+        let preferred: [RuntimeAction] = [.install, .repair, .refreshStatus]
+        return preferred.filter(model.runtimeActions.contains)
+    }
+
+    private var detailsSection: some View {
+        detailGrid(facts: detailFacts)
+    }
+
+    private var nextStepSection: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text(localized("Next step", "下一步", language: language))
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(AppShellPalette.textTertiary)
+            Text(model.installSnapshot.nextStep)
+                .font(.subheadline)
+                .foregroundStyle(AppShellPalette.textSecondary)
+                .fixedSize(horizontal: false, vertical: true)
+        }
     }
 
     private var installProgressSection: some View {
@@ -84,10 +69,10 @@ struct OpenClawInstallView: View {
                 VStack(alignment: .leading, spacing: 6) {
                     Text(localized("Installation Progress", "安装进度", language: language))
                         .font(.headline)
-                        .foregroundStyle(.white)
+                        .foregroundStyle(AppShellPalette.textPrimary)
                     Text(progressHeadline(for: progress))
                         .font(.title3.weight(.semibold))
-                        .foregroundStyle(.white)
+                        .foregroundStyle(AppShellPalette.textPrimary)
                 }
 
                 Spacer()
@@ -110,7 +95,7 @@ struct OpenClawInstallView: View {
 
                         Text(stageTitle(stage.stage))
                             .font(.subheadline.weight(stage.state == .active ? .semibold : .regular))
-                            .foregroundStyle(.white)
+                            .foregroundStyle(AppShellPalette.textPrimary)
 
                         Spacer()
 
@@ -121,176 +106,129 @@ struct OpenClawInstallView: View {
                 }
             }
             .padding(14)
-            .background(Color.white.opacity(0.04), in: RoundedRectangle(cornerRadius: ClawNestLayout.Radius.medium - 2, style: .continuous))
+            .background(AppShellPalette.subtleFill, in: RoundedRectangle(cornerRadius: ClawNestLayout.Radius.medium - 2, style: .continuous))
 
             VStack(alignment: .leading, spacing: 8) {
                 Text(localized("Current Step", "当前步骤", language: language))
                     .font(.caption.weight(.semibold))
-                    .foregroundStyle(.white.opacity(0.56))
+                    .foregroundStyle(AppShellPalette.textTertiary)
 
                 Text(progress.detail)
                     .font(.subheadline)
-                    .foregroundStyle(.white.opacity(0.88))
+                    .foregroundStyle(AppShellPalette.textSecondary)
                     .fixedSize(horizontal: false, vertical: true)
             }
             .padding(14)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .background(Color.white.opacity(0.04), in: RoundedRectangle(cornerRadius: ClawNestLayout.Radius.medium - 2, style: .continuous))
+            .background(AppShellPalette.subtleFill, in: RoundedRectangle(cornerRadius: ClawNestLayout.Radius.medium - 2, style: .continuous))
 
             if let failure = progress.failure {
                 installFailureView(failure)
             } else if progress.isComplete {
-                Text(localized("Installation is complete. You can close this modal or continue with the next setup step.", "安装已完成。你可以关闭弹窗，或继续下一步设置。", language: language))
+                Text(localized("Installation is complete. Continue with the official onboarding step if this Mac still needs first-run setup.", "安装已完成。如果这台 Mac 还没完成首次设置，请继续执行官方 onboarding。", language: language))
                     .font(.footnote)
-                    .foregroundStyle(.white.opacity(0.62))
+                    .foregroundStyle(AppShellPalette.textTertiary)
                     .fixedSize(horizontal: false, vertical: true)
             }
         }
     }
 
-    private var installDirectoryField: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            Text(localized("Install directory", "安装目录", language: language))
-                .font(.caption.weight(.semibold))
-                .foregroundStyle(.white.opacity(0.56))
+    @ViewBuilder
+    private var installStatusSection: some View {
+        if let installStatusMessage = model.installStatusMessage {
+            VStack(alignment: .leading, spacing: 12) {
+                Text(installStatusMessage)
+                    .font(.system(.callout, design: .monospaced))
+                    .foregroundStyle(AppShellPalette.textSecondary)
+                    .textSelection(.enabled)
+                    .frame(maxWidth: .infinity, alignment: .leading)
 
-            HStack(spacing: 10) {
-                TextField(localized("Install directory", "安装目录", language: language), text: directoryBinding)
-                    .textFieldStyle(.roundedBorder)
-                    .font(.system(.body, design: .monospaced))
-
-                Button(localized("Choose…", "选择…", language: language)) {
-                    model.chooseInstallDirectory()
-                }
-                .buttonStyle(.bordered)
-                .disabled(model.isInstallingOpenClaw)
-            }
-        }
-    }
-
-    private var portField: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            Text(localized("Gateway port", "网关端口", language: language))
-                .font(.caption.weight(.semibold))
-                .foregroundStyle(.white.opacity(0.56))
-
-            TextField("19789", text: portBinding)
-                .textFieldStyle(.roundedBorder)
-                .font(.system(.body, design: .monospaced))
-                .frame(width: ClawNestLayout.Size.portFieldWidth)
-        }
-    }
-
-    private var installButton: some View {
-        Button(model.isInstallingOpenClaw ? localized("Installing…", "安装中…", language: language) : localized("Install OpenClaw", "安装 OpenClaw", language: language)) {
-            model.installOpenClaw()
-        }
-        .buttonStyle(.borderedProminent)
-        .tint(Color(red: 0.96, green: 0.63, blue: 0.39))
-        .disabled(model.isInstallingOpenClaw || !model.installValidation.isValid)
-    }
-
-    private var validationBanner: some View {
-        Text(model.installValidation.message)
-            .font(.subheadline.weight(.medium))
-            .foregroundStyle(.white)
-            .padding(14)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .background(
-                (model.installValidation.isValid
-                    ? Color(red: 0.12, green: 0.34, blue: 0.21)
-                    : Color(red: 0.35, green: 0.13, blue: 0.15)),
-                in: RoundedRectangle(cornerRadius: ClawNestLayout.Radius.medium - 2, style: .continuous)
-            )
-    }
-
-    private func installPreview(_ preview: OpenClawInstallPreview) -> some View {
-        LazyVGrid(columns: [GridItem(.adaptive(minimum: layout.previewMetricMinimumWidth), spacing: 14)], alignment: .leading, spacing: 14) {
-            previewMetric(localized("State", "状态目录", language: language), value: preview.stateDirectoryPath)
-            previewMetric(localized("Workspace", "工作区", language: language), value: preview.workspaceDirectoryPath)
-            previewMetric("LaunchAgent", value: preview.launchAgentLabel)
-            previewMetric(localized("Ports", "端口", language: language), value: reservedPortSummary(for: preview))
-        }
-    }
-
-    private func previewMetric(_ label: String, value: String) -> some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text(label)
-                .font(.caption.weight(.semibold))
-                .foregroundStyle(.white.opacity(0.56))
-            Text(value)
-                .font(.system(.callout, design: .monospaced))
-                .foregroundStyle(.white)
-                .lineLimit(4)
-                .frame(maxWidth: .infinity, alignment: .leading)
-        }
-        .padding(16)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Color.white.opacity(0.05), in: RoundedRectangle(cornerRadius: ClawNestLayout.Radius.medium - 2, style: .continuous))
-    }
-
-    private var knownInstances: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text(localized("Known Claws", "已知 Claw", language: language))
-                .font(.headline)
-                .foregroundStyle(.white)
-
-            ForEach(model.knownOpenClawInstances) { instance in
-                HStack(alignment: .top, spacing: 12) {
-                    Text(String(instance.gatewayPort))
-                        .font(.system(.body, design: .monospaced))
-                        .foregroundStyle(.white)
-                        .padding(.horizontal, 10)
-                        .padding(.vertical, 6)
-                        .background(Color.white.opacity(0.06), in: Capsule())
-
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text(instance.launchAgentLabel)
-                            .font(.subheadline.weight(.semibold))
-                            .foregroundStyle(.white)
-                        Text(instance.installDirectoryPath)
-                            .font(.caption.monospaced())
-                            .foregroundStyle(.white.opacity(0.56))
+                if installStatusMessage.contains("xcode-select --install") {
+                    Button(localized("Install Developer Tools", "安装开发者工具", language: language)) {
+                        model.installDeveloperTools()
                     }
-
-                    Spacer()
+                    .buttonStyle(.bordered)
                 }
-                .padding(14)
-                .background(Color.white.opacity(0.04), in: RoundedRectangle(cornerRadius: ClawNestLayout.Radius.medium - 2, style: .continuous))
             }
         }
     }
 
-    private func reservedPortSummary(for preview: OpenClawInstallPreview) -> String {
-        guard let gatewayPort = preview.reservedPorts.first?.port,
-              let browserControlPort = preview.reservedPorts.dropFirst().first?.port,
-              let cdpStart = preview.reservedPorts.dropFirst(2).first?.port,
-              let cdpEnd = preview.reservedPorts.last?.port
-        else {
-            return localized("No ports reserved", "没有保留端口", language: language)
+    private var actionSection: some View {
+        FlowLayout(spacing: 12, rowSpacing: 12) {
+            ForEach(cliActions) { action in
+                actionButton(for: action)
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func actionButton(for action: RuntimeAction) -> some View {
+        if action == .install {
+            Button(action.title(in: language)) {
+                model.perform(action)
+            }
+            .buttonStyle(BorderedProminentButtonStyle())
+            .tint(Color(red: 0.96, green: 0.63, blue: 0.39))
+            .disabled(!model.isActionEnabled(action))
+        } else {
+            Button(action.title(in: language)) {
+                model.perform(action)
+            }
+            .buttonStyle(BorderedButtonStyle())
+            .disabled(!model.isActionEnabled(action))
+        }
+    }
+
+    private var detailFacts: [(String, String)] {
+        if let resolvedCommandPath = model.installSnapshot.resolvedCommandPath {
+            return [
+                (localized("Detected CLI", "检测到的 CLI", language: language), resolvedCommandPath),
+                (localized("Configured command", "当前配置命令", language: language), model.configuration.openClawCommand)
+            ]
         }
 
-        return "\(gatewayPort), \(browserControlPort), \(cdpStart)-\(cdpEnd)"
+        return [
+            (localized("Configured command", "当前配置命令", language: language), model.configuration.openClawCommand)
+        ]
+    }
+
+    private func detailGrid(facts: [(String, String)]) -> some View {
+        LazyVGrid(columns: [GridItem(.adaptive(minimum: layout.detailFactMinimumWidth), spacing: 14)], alignment: .leading, spacing: 14) {
+            ForEach(Array(facts.enumerated()), id: \.offset) { _, fact in
+                VStack(alignment: .leading, spacing: 8) {
+                    Text(fact.0)
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(AppShellPalette.textTertiary)
+                    Text(fact.1)
+                        .font(.system(.callout, design: .monospaced))
+                        .foregroundStyle(AppShellPalette.textPrimary)
+                        .lineLimit(4)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                }
+                .padding(16)
+                .background(AppShellPalette.subtleFill, in: RoundedRectangle(cornerRadius: ClawNestLayout.Radius.medium - 2, style: .continuous))
+            }
+        }
     }
 
     private func installFailureView(_ failure: OpenClawInstallFailure) -> some View {
         VStack(alignment: .leading, spacing: 12) {
             Text(localized("Step Failed", "步骤失败", language: language))
                 .font(.caption.weight(.semibold))
-                .foregroundStyle(Color(red: 0.98, green: 0.62, blue: 0.58))
+                .foregroundStyle(Color(red: 0.92, green: 0.39, blue: 0.38))
 
             Text(stageTitle(failure.stage))
                 .font(.headline)
-                .foregroundStyle(.white)
+                .foregroundStyle(AppShellPalette.textPrimary)
 
             Text(failure.summary)
                 .font(.subheadline.weight(.medium))
-                .foregroundStyle(.white)
+                .foregroundStyle(AppShellPalette.textPrimary)
                 .fixedSize(horizontal: false, vertical: true)
 
             Text(failure.recoverySuggestion)
                 .font(.footnote)
-                .foregroundStyle(.white.opacity(0.68))
+                .foregroundStyle(AppShellPalette.textSecondary)
                 .fixedSize(horizontal: false, vertical: true)
 
             if failure.stage == .installingDeveloperTools {
@@ -306,21 +244,21 @@ struct OpenClawInstallView: View {
                 VStack(alignment: .leading, spacing: 8) {
                     Text(localized("Installer Output", "安装器输出", language: language))
                         .font(.caption.weight(.semibold))
-                        .foregroundStyle(.white.opacity(0.56))
+                        .foregroundStyle(AppShellPalette.textTertiary)
 
                     Text(rawOutput)
                         .font(.system(.caption, design: .monospaced))
-                        .foregroundStyle(.white.opacity(0.72))
+                        .foregroundStyle(AppShellPalette.textSecondary)
                         .textSelection(.enabled)
                         .frame(maxWidth: .infinity, alignment: .leading)
                 }
                 .padding(12)
-                .background(Color.black.opacity(0.22), in: RoundedRectangle(cornerRadius: ClawNestLayout.Radius.medium - 6, style: .continuous))
+                .background(AppShellPalette.codeBackground, in: RoundedRectangle(cornerRadius: ClawNestLayout.Radius.medium - 6, style: .continuous))
             }
         }
         .padding(14)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Color(red: 0.35, green: 0.13, blue: 0.15).opacity(0.72), in: RoundedRectangle(cornerRadius: ClawNestLayout.Radius.medium - 2, style: .continuous))
+        .background(Color(red: 0.98, green: 0.91, blue: 0.90), in: RoundedRectangle(cornerRadius: ClawNestLayout.Radius.medium - 2, style: .continuous))
     }
 
     private func progressHeadline(for progress: OpenClawInstallProgress) -> String {
@@ -357,18 +295,18 @@ struct OpenClawInstallView: View {
 
     private func progressStatusColor(for progress: OpenClawInstallProgress) -> Color {
         if progress.failure != nil {
-            return Color(red: 0.98, green: 0.62, blue: 0.58)
+            return Color(red: 0.92, green: 0.39, blue: 0.38)
         }
 
         if progress.isComplete {
-            return Color(red: 0.54, green: 0.84, blue: 0.58)
+            return Color(red: 0.29, green: 0.88, blue: 0.53)
         }
 
         if progress.hasStarted {
-            return Color(red: 0.98, green: 0.72, blue: 0.42)
+            return Color(red: 0.95, green: 0.72, blue: 0.38)
         }
 
-        return .white.opacity(0.56)
+        return AppShellPalette.textTertiary
     }
 
     private func progressSymbol(for state: OpenClawInstallStageState) -> String {
@@ -389,15 +327,15 @@ struct OpenClawInstallView: View {
     private func progressColor(for state: OpenClawInstallStageState) -> Color {
         switch state {
         case .pending:
-            return .white.opacity(0.40)
+            return AppShellPalette.textTertiary
         case .active:
-            return Color(red: 0.98, green: 0.72, blue: 0.42)
+            return Color(red: 0.95, green: 0.72, blue: 0.38)
         case .completed:
-            return Color(red: 0.54, green: 0.84, blue: 0.58)
+            return Color(red: 0.29, green: 0.88, blue: 0.53)
         case .failed:
-            return Color(red: 0.98, green: 0.62, blue: 0.58)
+            return Color(red: 0.92, green: 0.39, blue: 0.38)
         case .skipped:
-            return Color(red: 0.56, green: 0.80, blue: 0.96)
+            return Color(red: 0.34, green: 0.73, blue: 0.94)
         }
     }
 

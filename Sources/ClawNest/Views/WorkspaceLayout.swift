@@ -47,7 +47,7 @@ enum ClawNestLayout {
     }
 
     enum Size {
-        static let sidebarLogo: CGFloat = 38
+        static let sidebarLogo: CGFloat = 32
         static let statusHeroIconBox: CGFloat = 56
         static let clawHeaderAvatar: CGFloat = 64
         static let clawCardAvatar: CGFloat = 58
@@ -56,7 +56,7 @@ enum ClawNestLayout {
         static let compactAgentBadge: CGFloat = 34
         static let taskIconBox: CGFloat = 42
         static let pulseDot: CGFloat = 8
-        static let sidebarIconWidth: CGFloat = 26
+        static let sidebarIconWidth: CGFloat = 24
         static let accentBarWidth: CGFloat = 92
         static let accentBarHeight: CGFloat = 2
         static let menuBarWidth: CGFloat = 320
@@ -114,7 +114,7 @@ struct WorkspaceLayoutMetrics {
     }
 
     var sidebarWidth: CGFloat {
-        clamped(containerSize.width * 0.12, min: containerSize.width < 900 ? 124 : (containerSize.width < 1100 ? 138 : 150), max: 170)
+        clamped(containerSize.width * 0.10, min: containerSize.width < 900 ? 96 : (containerSize.width < 1100 ? 106 : 114), max: 122)
     }
 
     var detailCanvasWidth: CGFloat {

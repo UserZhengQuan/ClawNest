@@ -18,7 +18,7 @@ struct ClawNestApp: App {
         }
         .defaultSize(width: ClawNestLayout.Window.defaultWidth, height: ClawNestLayout.Window.defaultHeight)
         .commands {
-            CommandMenu("Claws") {
+            CommandMenu("Claw") {
                 Button("About ClawNest") {
                     NSApp.orderFrontStandardAboutPanel(nil)
                 }
@@ -71,16 +71,16 @@ struct ClawNestApp: App {
 final class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationDidFinishLaunching(_ notification: Notification) {
         DispatchQueue.main.async {
-            MainMenuController.keepOnlyClawsMenu()
+            MainMenuController.keepOnlyClawMenu()
         }
     }
 }
 
 @MainActor
 enum MainMenuController {
-    static func keepOnlyClawsMenu() {
+    static func keepOnlyClawMenu() {
         guard let mainMenu = NSApp.mainMenu,
-              let clawsItem = mainMenu.items.first(where: { $0.title == "Claws" }) else {
+              let clawItem = mainMenu.items.first(where: { $0.title == "Claw" }) else {
             return
         }
 
@@ -88,6 +88,6 @@ enum MainMenuController {
             mainMenu.removeItem(at: 0)
         }
 
-        mainMenu.addItem(clawsItem)
+        mainMenu.addItem(clawItem)
     }
 }
