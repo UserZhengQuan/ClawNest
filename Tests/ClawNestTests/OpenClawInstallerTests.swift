@@ -1,10 +1,9 @@
-import Darwin
 import Foundation
 import XCTest
 @testable import ClawNest
 
 final class OpenClawInstallerTests: XCTestCase {
-    func testSnapshotRejectsPortsReservedByKnownInstance() async throws {
+    func testSnapshotDescribesOfficialInstallFlow() async throws {
         let tempRoot = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
         try FileManager.default.createDirectory(at: tempRoot, withIntermediateDirectories: true)
         defer { try? FileManager.default.removeItem(at: tempRoot) }
@@ -38,68 +37,80 @@ final class OpenClawInstallerTests: XCTestCase {
             )
         )
 
-        XCTAssertFalse(snapshot.validation.isValid)
-        XCTAssertTrue(snapshot.validation.message.contains("19789"))
+        XCTAssertTrue(snapshot.validation.isValid)
+        XCTAssertNil(snapshot.validation.preview)
+        XCTAssertTrue(snapshot.validation.message.contains("official OpenClaw CLI"))
+        XCTAssertEqual(snapshot.knownInstances.count, 1)
     }
 
-    func testInstallWritesConfigAndLaunchAgentForIsolatedInstance() async throws {
+    func testInstallRunsOfficialInstallerAndResolvesGlobalCLI() async throws {
         let tempRoot = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
-        let installDirectory = tempRoot.appendingPathComponent("instance", isDirectory: true)
-        let homeDirectory = tempRoot.appendingPathComponent("home", isDirectory: true)
         try FileManager.default.createDirectory(at: tempRoot, withIntermediateDirectories: true)
         defer { try? FileManager.default.removeItem(at: tempRoot) }
 
-        let store = MemoryInstalledOpenClawInstanceStore()
-        let runner = InstallerCommandRunner()
+        let runner = InstallerCommandRunner(
+            existingOpenClawPath: nil,
+            installedOpenClawPath: "/usr/local/bin/openclaw"
+        )
         let installer = OpenClawInstaller(
             runner: runner,
-            registryStore: store,
+            registryStore: MemoryInstalledOpenClawInstanceStore(),
             portInspector: PortInspector { _ in true },
-            homeDirectory: homeDirectory
+            homeDirectory: tempRoot.appendingPathComponent("home", isDirectory: true)
         )
 
         let result = try await installer.install(
             draft: OpenClawInstallDraft(
-                installDirectoryPath: installDirectory.path,
+                installDirectoryPath: tempRoot.appendingPathComponent("ignored", isDirectory: true).path,
                 gatewayPortText: "20789"
             )
         )
 
-        let configPath = installDirectory.appendingPathComponent("state/openclaw.json").path
-        let plistPath = homeDirectory.appendingPathComponent("Library/LaunchAgents/ai.clawnest.openclaw.20789.plist").path
-
-        XCTAssertTrue(FileManager.default.fileExists(atPath: configPath))
-        XCTAssertTrue(FileManager.default.fileExists(atPath: plistPath))
-        XCTAssertEqual(result.suggestedConfiguration.dashboardURLString, "http://127.0.0.1:20789/")
-        XCTAssertEqual(result.suggestedConfiguration.launchAgentLabel, "ai.clawnest.openclaw.20789")
-
-        let configData = try Data(contentsOf: URL(fileURLWithPath: configPath))
-        let configJSON = try XCTUnwrap(JSONSerialization.jsonObject(with: configData) as? [String: Any])
-        let gateway = try XCTUnwrap(configJSON["gateway"] as? [String: Any])
-        XCTAssertEqual(gateway["port"] as? Int, 20789)
-
-        let snapshot = await installer.snapshot(
-            for: OpenClawInstallDraft(
-                installDirectoryPath: installDirectory.path,
-                gatewayPortText: "20789"
-            )
-        )
-        XCTAssertEqual(snapshot.knownInstances.count, 1)
-        XCTAssertEqual(snapshot.knownInstances.first?.gatewayPort, 20789)
+        XCTAssertEqual(result.installedCommand, "/usr/local/bin/openclaw")
+        XCTAssertTrue(result.summary.contains("openclaw onboard --install-daemon"))
 
         let commands = await runner.recordedCommands()
-        XCTAssertTrue(commands.contains { $0.contains("install-cli.sh") && $0.contains("--prefix '") })
-        XCTAssertTrue(commands.contains("launchctl bootstrap gui/\(getuid()) \(plistPath)"))
-        XCTAssertTrue(commands.contains("launchctl kickstart -k gui/\(getuid())/ai.clawnest.openclaw.20789"))
+        XCTAssertTrue(commands.contains("/bin/zsh -lc command -v openclaw"))
+        XCTAssertTrue(commands.contains { $0.contains("https://openclaw.ai/install.sh") && $0.contains("--no-onboard") })
+        XCTAssertFalse(commands.contains { $0.contains("install-cli.sh") })
+        XCTAssertFalse(commands.contains { $0.contains("launchctl") })
     }
 
-    func testInstallFailsCleanlyWhenGitIsMissing() async throws {
+    func testInstallReusesExistingOpenClawWithoutRunningInstaller() async throws {
+        let tempRoot = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
+        try FileManager.default.createDirectory(at: tempRoot, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: tempRoot) }
+
+        let runner = InstallerCommandRunner(existingOpenClawPath: "/opt/homebrew/bin/openclaw")
+        let installer = OpenClawInstaller(
+            runner: runner,
+            registryStore: MemoryInstalledOpenClawInstanceStore(),
+            portInspector: PortInspector { _ in true },
+            homeDirectory: tempRoot.appendingPathComponent("home", isDirectory: true)
+        )
+
+        let result = try await installer.install(
+            draft: OpenClawInstallDraft(
+                installDirectoryPath: tempRoot.appendingPathComponent("ignored", isDirectory: true).path,
+                gatewayPortText: "21789"
+            )
+        )
+
+        XCTAssertEqual(result.installedCommand, "/opt/homebrew/bin/openclaw")
+        let commands = await runner.recordedCommands()
+        XCTAssertEqual(commands, ["/bin/zsh -lc command -v openclaw"])
+    }
+
+    func testInstallFailsWhenOfficialInstallerDoesNotExposeCLIOnPath() async throws {
         let tempRoot = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
         try FileManager.default.createDirectory(at: tempRoot, withIntermediateDirectories: true)
         defer { try? FileManager.default.removeItem(at: tempRoot) }
 
         let installer = OpenClawInstaller(
-            runner: InstallerCommandRunner(gitPath: nil),
+            runner: InstallerCommandRunner(
+                existingOpenClawPath: nil,
+                installedOpenClawPath: nil
+            ),
             registryStore: MemoryInstalledOpenClawInstanceStore(),
             portInspector: PortInspector { _ in true },
             homeDirectory: tempRoot.appendingPathComponent("home", isDirectory: true)
@@ -108,16 +119,49 @@ final class OpenClawInstallerTests: XCTestCase {
         do {
             _ = try await installer.install(
                 draft: OpenClawInstallDraft(
-                    installDirectoryPath: tempRoot.appendingPathComponent("instance", isDirectory: true).path,
-                    gatewayPortText: "21789"
+                    installDirectoryPath: tempRoot.appendingPathComponent("ignored", isDirectory: true).path,
+                    gatewayPortText: "22789"
                 )
             )
-            XCTFail("Expected missing git error")
+            XCTFail("Expected missing binary error")
         } catch let error as OpenClawInstallError {
-            guard case let .missingGit(message) = error else {
+            guard case .missingOpenClawBinary = error else {
                 return XCTFail("Unexpected installer error: \(error)")
             }
-            XCTAssertTrue(message.contains("xcode-select --install"))
+        }
+    }
+
+    func testInstallSurfacesOfficialInstallerFailureOutput() async throws {
+        let tempRoot = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
+        try FileManager.default.createDirectory(at: tempRoot, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: tempRoot) }
+
+        let installer = OpenClawInstaller(
+            runner: InstallerCommandRunner(
+                existingOpenClawPath: nil,
+                installedOpenClawPath: nil,
+                installerExitCode: 1,
+                installerStdout: "",
+                installerStderr: "curl: (6) Could not resolve host"
+            ),
+            registryStore: MemoryInstalledOpenClawInstanceStore(),
+            portInspector: PortInspector { _ in true },
+            homeDirectory: tempRoot.appendingPathComponent("home", isDirectory: true)
+        )
+
+        do {
+            _ = try await installer.install(
+                draft: OpenClawInstallDraft(
+                    installDirectoryPath: tempRoot.appendingPathComponent("ignored", isDirectory: true).path,
+                    gatewayPortText: "23789"
+                )
+            )
+            XCTFail("Expected installer failure")
+        } catch let error as OpenClawInstallError {
+            guard case let .installScriptFailed(message) = error else {
+                return XCTFail("Unexpected installer error: \(error)")
+            }
+            XCTAssertTrue(message.contains("Could not resolve host"))
         }
     }
 }
@@ -148,32 +192,37 @@ private final class MemoryInstalledOpenClawInstanceStore: InstalledOpenClawInsta
 
 private actor InstallerCommandRunner: CommandRunning {
     private var commands: [String] = []
-    private let gitPath: String?
+    private let existingOpenClawPath: String?
+    private let installedOpenClawPath: String?
+    private let installerExitCode: Int32
+    private let installerStdout: String
+    private let installerStderr: String
+    private var installerHasRun = false
 
-    init(gitPath: String? = "/usr/bin/git") {
-        self.gitPath = gitPath
+    init(
+        existingOpenClawPath: String? = nil,
+        installedOpenClawPath: String? = "/usr/local/bin/openclaw",
+        installerExitCode: Int32 = 0,
+        installerStdout: String = "{\"level\":\"info\",\"message\":\"installed\"}\n",
+        installerStderr: String = ""
+    ) {
+        self.existingOpenClawPath = existingOpenClawPath
+        self.installedOpenClawPath = installedOpenClawPath
+        self.installerExitCode = installerExitCode
+        self.installerStdout = installerStdout
+        self.installerStderr = installerStderr
     }
 
-    func run(command: String, arguments: [String], environment: [String : String]) async -> CommandResult {
+    func run(command: String, arguments: [String], environment: [String: String]) async -> CommandResult {
         commands.append(([command] + arguments).joined(separator: " "))
 
-        if command == "/bin/zsh", arguments == ["-lc", "command -v git"] {
+        if command == "/bin/zsh", arguments == ["-lc", "command -v openclaw"] {
+            let resolvedPath = installerHasRun ? installedOpenClawPath : existingOpenClawPath
             return CommandResult(
                 command: command,
                 arguments: arguments,
-                exitCode: gitPath == nil ? 1 : 0,
-                stdout: gitPath.map { "\($0)\n" } ?? "",
-                stderr: "",
-                launchError: nil
-            )
-        }
-
-        if command == "/bin/zsh", arguments == ["-lc", "command -v node"] {
-            return CommandResult(
-                command: command,
-                arguments: arguments,
-                exitCode: 0,
-                stdout: "/usr/local/bin/node\n",
+                exitCode: resolvedPath == nil ? 1 : 0,
+                stdout: resolvedPath.map { "\($0)\n" } ?? "",
                 stderr: "",
                 launchError: nil
             )
@@ -181,20 +230,14 @@ private actor InstallerCommandRunner: CommandRunning {
 
         if command == "/bin/zsh",
            let installCommand = arguments.last,
-           installCommand.contains("install-cli.sh"),
-           let prefix = extractPrefix(from: installCommand) {
-            let binDirectory = URL(fileURLWithPath: prefix, isDirectory: true).appendingPathComponent("bin", isDirectory: true)
-            try? FileManager.default.createDirectory(at: binDirectory, withIntermediateDirectories: true)
-            let executableURL = binDirectory.appendingPathComponent("openclaw")
-            try? "#!/bin/sh\nexit 0\n".write(to: executableURL, atomically: true, encoding: .utf8)
-            try? FileManager.default.setAttributes([.posixPermissions: 0o755], ofItemAtPath: executableURL.path)
-
+           installCommand.contains("https://openclaw.ai/install.sh") {
+            installerHasRun = true
             return CommandResult(
                 command: command,
                 arguments: arguments,
-                exitCode: 0,
-                stdout: "{\"level\":\"info\",\"message\":\"installed\"}\n",
-                stderr: "",
+                exitCode: installerExitCode,
+                stdout: installerStdout,
+                stderr: installerStderr,
                 launchError: nil
             )
         }
@@ -211,12 +254,5 @@ private actor InstallerCommandRunner: CommandRunning {
 
     func recordedCommands() -> [String] {
         commands
-    }
-
-    private func extractPrefix(from command: String) -> String? {
-        guard let prefixRange = command.range(of: "--prefix '") else { return nil }
-        let remainder = command[prefixRange.upperBound...]
-        guard let closingQuote = remainder.firstIndex(of: "'") else { return nil }
-        return String(remainder[..<closingQuote])
     }
 }

@@ -1,6 +1,28 @@
 import Foundation
 import SwiftUI
 
+private enum WorkspaceChrome {
+    static let selectionTint = Color(red: 0.36, green: 0.47, blue: 0.63)
+    static let canvas = Color(red: 0.94, green: 0.95, blue: 0.97)
+    static let canvasInset = Color(red: 0.98, green: 0.98, blue: 0.99)
+    static let panelFill = Color(red: 0.97, green: 0.98, blue: 0.99)
+    static let rowFill = Color(red: 0.95, green: 0.96, blue: 0.98)
+    static let panelStroke = Color(red: 0.85, green: 0.88, blue: 0.92)
+    static let strongStroke = Color(red: 0.80, green: 0.84, blue: 0.89)
+    static let divider = Color(red: 0.86, green: 0.89, blue: 0.93)
+    static let textPrimary = Color(red: 0.17, green: 0.19, blue: 0.22)
+    static let textSecondary = Color(red: 0.36, green: 0.40, blue: 0.46)
+    static let textTertiary = Color(red: 0.49, green: 0.53, blue: 0.60)
+    static let textQuaternary = Color(red: 0.61, green: 0.65, blue: 0.72)
+    static let selectionFill = Color(red: 0.88, green: 0.92, blue: 0.97)
+    static let selectionFillStrong = Color(red: 0.84, green: 0.89, blue: 0.95)
+    static let codeFill = Color(red: 0.95, green: 0.96, blue: 0.98)
+    static let codeStroke = Color(red: 0.84, green: 0.87, blue: 0.91)
+    static let overlayFill = Color(red: 0.98, green: 0.98, blue: 0.99).opacity(0.95)
+    static let onlineDot = Color(red: 0.33, green: 0.67, blue: 0.47)
+    static let offlineDot = Color(red: 0.77, green: 0.80, blue: 0.86)
+}
+
 struct ContentView: View {
     @ObservedObject var model: AppModel
 
@@ -20,13 +42,13 @@ struct ContentView: View {
                 HStack(spacing: 0) {
                     sidebar(layout: layout)
                     Divider()
-                        .overlay(Color.white.opacity(0.08))
+                        .overlay(WorkspaceChrome.divider)
                     detailSurface(layout: layout)
                 }
                 .padding(layout.rootPadding)
             }
         }
-        .preferredColorScheme(.dark)
+        .preferredColorScheme(.light)
         .frame(minWidth: ClawNestLayout.Window.minimumWidth, minHeight: ClawNestLayout.Window.minimumHeight)
     }
 
@@ -39,51 +61,40 @@ struct ContentView: View {
     }
 
     private var selectionTint: Color {
-        Color(red: 0.42, green: 0.55, blue: 0.77)
+        WorkspaceChrome.selectionTint
     }
 
     private var panelFillColor: Color {
-        Color.white.opacity(0.035)
+        WorkspaceChrome.panelFill
     }
 
     private var rowFillColor: Color {
-        Color.white.opacity(0.022)
+        WorkspaceChrome.rowFill
     }
 
     private var panelStrokeColor: Color {
-        Color.white.opacity(0.07)
+        WorkspaceChrome.panelStroke
     }
 
     private func background(layout: WorkspaceLayoutMetrics) -> some View {
         ZStack {
-            Color(red: 0.11, green: 0.12, blue: 0.14)
+            WorkspaceChrome.canvas
                 .ignoresSafeArea()
 
-            LinearGradient(
-                colors: [.white.opacity(0.04), .clear],
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )
-            .ignoresSafeArea()
-
             RoundedRectangle(cornerRadius: ClawNestLayout.Radius.canvas, style: .continuous)
-                .fill(.white.opacity(0.015))
+                .fill(WorkspaceChrome.canvasInset)
                 .padding(ClawNestLayout.Spacing.small)
         }
     }
 
     private func sidebar(layout: WorkspaceLayoutMetrics) -> some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: layout.groupSpacing) {
-                sidebarBrandSection
-                sidebarNavigationSection
-                sidebarPulseSection
-                sidebarFooterSection
-            }
-            .padding(layout.panelPadding)
-            .frame(maxWidth: .infinity, alignment: .leading)
+        VStack(spacing: layout.isCompactHeight ? 14 : 18) {
+            sidebarBrandSection
+            sidebarNavigationSection
+            Spacer(minLength: 0)
         }
-        .scrollIndicators(.hidden)
+        .padding(.horizontal, 10)
+        .padding(.vertical, layout.isCompactHeight ? 12 : 16)
         .frame(width: layout.sidebarWidth)
         .frame(maxHeight: .infinity, alignment: .top)
         .background(
@@ -97,139 +108,63 @@ struct ContentView: View {
     }
 
     private var sidebarBrandSection: some View {
-        VStack(alignment: .leading, spacing: ClawNestLayout.Spacing.medium) {
-            HStack(spacing: ClawNestLayout.Spacing.medium) {
-                ZStack {
-                    RoundedRectangle(cornerRadius: ClawNestLayout.Radius.medium, style: .continuous)
-                        .fill(selectionTint.opacity(0.20))
-                    Image(systemName: "pawprint.fill")
-                        .font(.system(size: ClawNestLayout.Typography.avatarIcon, weight: .semibold))
-                        .foregroundStyle(selectionTint)
-                }
-                .frame(width: ClawNestLayout.Size.sidebarLogo, height: ClawNestLayout.Size.sidebarLogo)
-
-                VStack(alignment: .leading, spacing: 3) {
-                    Text("ClawNest")
-                        .font(.system(size: ClawNestLayout.Typography.brand, weight: .semibold))
-                        .foregroundStyle(.white)
-                    Text(t("A companion workspace for every Claw", "每个 Claw 的陪伴式工作台"))
-                        .font(.footnote)
-                        .foregroundStyle(.white.opacity(0.60))
-                }
+        HStack {
+            Spacer(minLength: 0)
+            ZStack {
+                RoundedRectangle(cornerRadius: ClawNestLayout.Radius.medium, style: .continuous)
+                    .fill(selectionTint.opacity(0.14))
+                Image(systemName: "pawprint.fill")
+                    .font(.system(size: ClawNestLayout.Typography.avatarIcon, weight: .semibold))
+                    .foregroundStyle(selectionTint)
             }
-
-            VStack(alignment: .leading, spacing: 8) {
-                Text(t("Now watching", "当前关注"))
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(.white.opacity(0.56))
-                HStack {
-                    Text(currentClaw.name)
-                        .font(.headline)
-                        .foregroundStyle(.white)
-                    statusDot(for: currentClaw.statusColor)
-                }
-                Text(currentClaw.machineLabel)
-                    .font(.subheadline)
-                    .foregroundStyle(.white.opacity(0.62))
-            }
-            .padding(14)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .background(rowFillColor, in: RoundedRectangle(cornerRadius: ClawNestLayout.Radius.medium, style: .continuous))
+            .frame(width: ClawNestLayout.Size.sidebarLogo - 2, height: ClawNestLayout.Size.sidebarLogo - 2)
+            Spacer(minLength: 0)
         }
     }
 
     private var sidebarNavigationSection: some View {
-        VStack(spacing: 10) {
+        VStack(spacing: 8) {
             ForEach(WorkspaceSection.allCases) { section in
                 sidebarButton(for: section)
             }
         }
+        .frame(maxWidth: .infinity)
     }
 
     private func sidebarButton(for section: WorkspaceSection) -> some View {
         Button {
             selectedSection = section
         } label: {
-            HStack(spacing: 12) {
+            VStack(spacing: 8) {
                 Image(systemName: section.systemImage)
                     .font(.system(size: ClawNestLayout.Typography.navIcon, weight: .semibold))
-                    .frame(width: ClawNestLayout.Size.sidebarIconWidth)
+                    .frame(width: 28, height: 20)
 
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(section.title(in: currentLanguage))
-                        .font(.headline)
-                    Text(section.subtitle(in: currentLanguage))
-                        .font(.caption)
-                        .foregroundStyle(.white.opacity(0.62))
-                }
-
-                Spacer()
+                Text(section.title(in: currentLanguage))
+                    .font(.caption.weight(.semibold))
+                    .lineLimit(1)
+                    .multilineTextAlignment(.center)
             }
-            .foregroundStyle(.white)
-            .padding(.horizontal, 14)
-            .padding(.vertical, 13)
+            .foregroundStyle(selectedSection == section ? WorkspaceChrome.textPrimary : WorkspaceChrome.textSecondary)
+            .frame(maxWidth: .infinity, minHeight: 70)
+            .padding(.horizontal, 8)
+            .padding(.vertical, 10)
             .background(sectionBackground(isSelected: selectedSection == section))
         }
         .buttonStyle(.plain)
-    }
-
-    private var sidebarPulseSection: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            Text(t("Nest pulse", "巢状态"))
-                .font(.headline)
-                .foregroundStyle(.white)
-
-            sidebarMetric(label: t("Live Claws", "在线 Claw"), value: "\(claws.filter(\.isOnline).count)")
-            sidebarMetric(label: t("Known Claws", "已知 Claw"), value: "\(claws.count)")
-            sidebarMetric(label: t("Moments", "动态"), value: "\(momentPosts.count)")
-            sidebarMetric(label: t("Latest heartbeat", "最近心跳"), value: model.snapshot.lastCheck.formatted(date: .omitted, time: .shortened))
-        }
-        .padding(16)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(rowFillColor, in: RoundedRectangle(cornerRadius: ClawNestLayout.Radius.medium, style: .continuous))
-    }
-
-    private var sidebarFooterSection: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text(t("Current Claw", "当前 Claw"))
-                .font(.caption.weight(.semibold))
-                .foregroundStyle(.white.opacity(0.56))
-            Text(model.snapshot.headline)
-                .font(.headline)
-                .foregroundStyle(.white)
-            Text(model.snapshot.detail)
-                .font(.footnote)
-                .foregroundStyle(.white.opacity(0.62))
-                .fixedSize(horizontal: false, vertical: true)
-        }
-        .padding(16)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(rowFillColor, in: RoundedRectangle(cornerRadius: ClawNestLayout.Radius.medium, style: .continuous))
     }
 
     private func sectionBackground(isSelected: Bool) -> some View {
         RoundedRectangle(cornerRadius: ClawNestLayout.Radius.medium, style: .continuous)
             .fill(
                 isSelected
-                    ? AnyShapeStyle(selectionTint.opacity(0.24))
-                    : AnyShapeStyle(Color.white.opacity(0.02))
+                    ? AnyShapeStyle(WorkspaceChrome.selectionFillStrong)
+                    : AnyShapeStyle(rowFillColor)
             )
             .overlay(
                 RoundedRectangle(cornerRadius: ClawNestLayout.Radius.medium, style: .continuous)
-                    .stroke(isSelected ? selectionTint.opacity(0.34) : Color.white.opacity(0.04), lineWidth: 1)
+                    .stroke(isSelected ? selectionTint.opacity(0.26) : panelStrokeColor, lineWidth: 1)
             )
-    }
-
-    private func sidebarMetric(label: String, value: String) -> some View {
-        HStack {
-            Text(label)
-                .font(.subheadline)
-                .foregroundStyle(.white.opacity(0.68))
-            Spacer()
-            Text(value)
-                .font(.system(.subheadline, design: .monospaced))
-                .foregroundStyle(.white)
-        }
     }
 
     private func detailSurface(layout: WorkspaceLayoutMetrics) -> some View {
@@ -321,10 +256,10 @@ struct ContentView: View {
                                     VStack(alignment: .leading, spacing: 4) {
                                         Text(thread.title)
                                             .font(.headline)
-                                            .foregroundStyle(.white)
+                                            .foregroundStyle(WorkspaceChrome.textPrimary)
                                         Text(thread.preview)
                                             .font(.subheadline)
-                                            .foregroundStyle(.white.opacity(0.66))
+                                            .foregroundStyle(WorkspaceChrome.textSecondary)
                                             .lineLimit(2)
                                     }
 
@@ -337,17 +272,17 @@ struct ContentView: View {
                                     Spacer()
                                     Text(thread.timestampText)
                                         .font(.caption.monospaced())
-                                        .foregroundStyle(.white.opacity(0.48))
+                                        .foregroundStyle(WorkspaceChrome.textQuaternary)
                                 }
                             }
                             .padding(16)
                             .frame(maxWidth: .infinity, alignment: .leading)
                             .background(
                                 RoundedRectangle(cornerRadius: ClawNestLayout.Radius.xLarge, style: .continuous)
-                                    .fill(selectedConversation.id == thread.id ? selectionTint.opacity(0.14) : rowFillColor)
+                                    .fill(selectedConversation.id == thread.id ? WorkspaceChrome.selectionFill : rowFillColor)
                                     .overlay(
                                         RoundedRectangle(cornerRadius: ClawNestLayout.Radius.xLarge, style: .continuous)
-                                            .stroke(selectedConversation.id == thread.id ? selectionTint.opacity(0.34) : Color.white.opacity(0.05), lineWidth: 1)
+                                            .stroke(selectedConversation.id == thread.id ? selectionTint.opacity(0.24) : panelStrokeColor, lineWidth: 1)
                                     )
                             )
                         }
@@ -362,10 +297,10 @@ struct ContentView: View {
                 VStack(alignment: .leading, spacing: 10) {
                     Text(t("Conversation routing", "会话路由"))
                         .font(.headline)
-                        .foregroundStyle(.white)
+                        .foregroundStyle(WorkspaceChrome.textPrimary)
                     Text(t("Only the main dashboard-backed thread is live today. Remote multi-Claw chat sync is sketched into the UI and left as a placeholder.", "目前只有主 dashboard 会话是真实可用的，远程多 Claw 聊天同步还只是占位。"))
                         .font(.footnote)
-                        .foregroundStyle(.white.opacity(0.62))
+                        .foregroundStyle(WorkspaceChrome.textSecondary)
                         .fixedSize(horizontal: false, vertical: true)
                 }
             }
@@ -405,17 +340,17 @@ struct ContentView: View {
         VStack(alignment: .leading, spacing: 10) {
             Text(thread.title)
                 .font(.system(size: ClawNestLayout.Typography.threadTitle, weight: .semibold))
-                .foregroundStyle(.white)
+                .foregroundStyle(WorkspaceChrome.textPrimary)
 
             Text(thread.description)
                 .font(.subheadline)
-                .foregroundStyle(.white.opacity(0.66))
+                .foregroundStyle(WorkspaceChrome.textSecondary)
                 .fixedSize(horizontal: false, vertical: true)
 
             FlowLayout(spacing: 10, rowSpacing: 10) {
                 labelPill(thread.clawName, systemImage: "pawprint.fill", tint: thread.primaryColor)
                 labelPill(thread.agentName, systemImage: "brain.head.profile", tint: thread.secondaryColor)
-                labelPill(thread.machineLabel, systemImage: "macbook", tint: .white.opacity(0.18))
+                labelPill(thread.machineLabel, systemImage: "macbook", tint: WorkspaceChrome.strongStroke)
             }
             .frame(maxWidth: layout.metadataWrapWidth, alignment: .leading)
         }
@@ -458,13 +393,13 @@ struct ContentView: View {
                     HStack {
                         Text(t("Need the full Claw deck?", "需要完整的 Claw 视图？"))
                             .font(.headline)
-                            .foregroundStyle(.white)
+                            .foregroundStyle(WorkspaceChrome.textPrimary)
                         Spacer()
                     }
 
                     Text(t("Go to Claws for runtime settings, installer flow, logs, and the complete recovery surface.", "去 Claws 页面查看运行时设置、安装流程、日志和完整恢复能力。"))
                         .font(.footnote)
-                        .foregroundStyle(.white.opacity(0.62))
+                        .foregroundStyle(WorkspaceChrome.textSecondary)
 
                     Button(t("Open Claws", "打开 Claws")) {
                         selectedSection = .claws
@@ -505,10 +440,10 @@ struct ContentView: View {
                     VStack(alignment: .leading, spacing: 8) {
                         Text(t("Deeper diagnostics live in Claws", "更完整的诊断在 Claws 页面"))
                             .font(.headline)
-                            .foregroundStyle(.white)
+                            .foregroundStyle(WorkspaceChrome.textPrimary)
                         Text(t("The caretaker thread is a soft landing. The detailed logs and runtime settings stay on the current Claw page.", "Caretaker 线程只是轻量入口，详细日志和运行时设置仍在当前 Claw 页面。"))
                             .font(.footnote)
-                            .foregroundStyle(.white.opacity(0.62))
+                            .foregroundStyle(WorkspaceChrome.textSecondary)
                     }
 
                     Spacer()
@@ -549,10 +484,10 @@ struct ContentView: View {
         VStack(alignment: .leading, spacing: 8) {
             Text(t("Installer handoff", "安装引导"))
                 .font(.headline)
-                .foregroundStyle(.white)
+                .foregroundStyle(WorkspaceChrome.textPrimary)
             Text(t("The install flow is fully usable already. Multi-step onboarding and prettier setup coaching will land later, so this thread simply points you at the working surface.", "安装流程已经可用，多步骤引导和更完整的新手提示后面再补，现在这个线程只负责带你到可用界面。"))
                 .font(.footnote)
-                .foregroundStyle(.white.opacity(0.62))
+                .foregroundStyle(WorkspaceChrome.textSecondary)
                 .fixedSize(horizontal: false, vertical: true)
         }
     }
@@ -570,11 +505,11 @@ struct ContentView: View {
             VStack(alignment: .leading, spacing: 16) {
                 Text(t("This conversation page is reserved.", "这个会话页已预留。"))
                     .font(.system(size: ClawNestLayout.Typography.cardTitle, weight: .semibold))
-                    .foregroundStyle(.white)
+                    .foregroundStyle(WorkspaceChrome.textPrimary)
 
                 Text(t("`\(thread.clawName)` with agent `\(thread.agentName)` is represented in the new layout, but real remote chat sync is not wired yet. The page stays empty on purpose instead of inventing fake controls.", "`\(thread.clawName)` 和 `\(thread.agentName)` 已经出现在新布局里，但真实的远程聊天同步还没接上，所以这里会故意保持为空。"))
                     .font(.body)
-                    .foregroundStyle(.white.opacity(0.66))
+                    .foregroundStyle(WorkspaceChrome.textSecondary)
                     .fixedSize(horizontal: false, vertical: true)
 
                 FlowLayout(spacing: 12, rowSpacing: 12) {
@@ -673,10 +608,10 @@ struct ContentView: View {
                 VStack(alignment: .leading, spacing: 12) {
                     Text(t("Bring in another Claw", "添加另一个 Claw"))
                         .font(.headline)
-                        .foregroundStyle(.white)
+                        .foregroundStyle(WorkspaceChrome.textPrimary)
                     Text(t("The installer is still the real one. This shortcut simply drops you into the Settings section where expansion lives.", "安装器仍然是可用的真实功能，这个入口只是带你跳到 Settings 里的扩展区域。"))
                         .font(.footnote)
-                        .foregroundStyle(.white.opacity(0.62))
+                        .foregroundStyle(WorkspaceChrome.textSecondary)
                         .fixedSize(horizontal: false, vertical: true)
 
                     Button(t("New Claw", "新建 Claw")) {
@@ -703,7 +638,7 @@ struct ContentView: View {
                     HStack(spacing: 8) {
                         Text(claw.name)
                             .font(.headline)
-                            .foregroundStyle(.white)
+                            .foregroundStyle(WorkspaceChrome.textPrimary)
                         if claw.isCurrent {
                             labelPill(t("Current", "当前"), systemImage: "heart.fill", tint: claw.primaryColor)
                         }
@@ -713,12 +648,12 @@ struct ContentView: View {
                         statusDot(for: claw.statusColor)
                         Text(claw.statusLabel)
                             .font(.subheadline.weight(.medium))
-                            .foregroundStyle(.white.opacity(0.86))
+                            .foregroundStyle(WorkspaceChrome.textSecondary)
                     }
 
                     Text(claw.machineLabel)
                         .font(.footnote)
-                        .foregroundStyle(.white.opacity(0.60))
+                        .foregroundStyle(WorkspaceChrome.textTertiary)
                         .lineLimit(2)
                 }
 
@@ -774,10 +709,10 @@ struct ContentView: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(
             RoundedRectangle(cornerRadius: ClawNestLayout.Radius.xLarge, style: .continuous)
-                .fill(selectedClaw.id == claw.id ? selectionTint.opacity(0.14) : rowFillColor)
+                .fill(selectedClaw.id == claw.id ? WorkspaceChrome.selectionFill : rowFillColor)
                 .overlay(
                     RoundedRectangle(cornerRadius: ClawNestLayout.Radius.xLarge, style: .continuous)
-                        .stroke(selectedClaw.id == claw.id ? selectionTint.opacity(0.34) : Color.white.opacity(0.05), lineWidth: 1)
+                        .stroke(selectedClaw.id == claw.id ? selectionTint.opacity(0.24) : panelStrokeColor, lineWidth: 1)
                 )
         )
         .contentShape(RoundedRectangle(cornerRadius: ClawNestLayout.Radius.xLarge, style: .continuous))
@@ -817,7 +752,7 @@ struct ContentView: View {
                 FlowLayout(spacing: 10, rowSpacing: 10) {
                     Text(selectedClaw.name)
                         .font(.system(size: ClawNestLayout.Typography.threadTitle, weight: .semibold))
-                        .foregroundStyle(.white)
+                        .foregroundStyle(WorkspaceChrome.textPrimary)
                     if selectedClaw.isCurrent {
                         labelPill(t("Current", "当前"), systemImage: "bolt.fill", tint: selectedClaw.primaryColor)
                     }
@@ -828,13 +763,13 @@ struct ContentView: View {
 
                 Text(selectedClaw.statusDescription)
                     .font(.body)
-                    .foregroundStyle(.white.opacity(0.66))
+                    .foregroundStyle(WorkspaceChrome.textSecondary)
                     .fixedSize(horizontal: false, vertical: true)
 
                 FlowLayout(spacing: 10, rowSpacing: 10) {
-                    labelPill(selectedClaw.machineLabel, systemImage: "macbook", tint: .white.opacity(0.18))
+                    labelPill(selectedClaw.machineLabel, systemImage: "macbook", tint: WorkspaceChrome.strongStroke)
                     labelPill("\(selectedClaw.agents.count) \(t("agents", "agents"))", systemImage: "person.2.fill", tint: selectedClaw.secondaryColor)
-                    labelPill(selectedClaw.lastActiveAt.formatted(date: .abbreviated, time: .shortened), systemImage: "clock", tint: .white.opacity(0.18))
+                    labelPill(selectedClaw.lastActiveAt.formatted(date: .abbreviated, time: .shortened), systemImage: "clock", tint: WorkspaceChrome.strongStroke)
                     labelPill(selectedClaw.launchAgentLabel, systemImage: "antenna.radiowaves.left.and.right", tint: selectedClaw.secondaryColor)
                 }
                 .frame(maxWidth: layout.metadataWrapWidth, alignment: .leading)
@@ -874,20 +809,20 @@ struct ContentView: View {
                             Text(section.title(in: currentLanguage))
                         }
                         .font(.subheadline.weight(.semibold))
-                        .foregroundStyle(.white)
+                        .foregroundStyle(selectedClawDetailSection == section ? WorkspaceChrome.textPrimary : WorkspaceChrome.textSecondary)
                         .padding(.horizontal, 14)
                         .padding(.vertical, 10)
                         .background(
                             RoundedRectangle(cornerRadius: ClawNestLayout.Radius.medium, style: .continuous)
                                 .fill(
                                     selectedClawDetailSection == section
-                                        ? AnyShapeStyle(selectionTint.opacity(0.24))
-                                        : AnyShapeStyle(Color.white.opacity(0.03))
+                                        ? AnyShapeStyle(WorkspaceChrome.selectionFill)
+                                        : AnyShapeStyle(rowFillColor)
                                 )
                         )
                         .overlay(
                             RoundedRectangle(cornerRadius: ClawNestLayout.Radius.medium, style: .continuous)
-                                .stroke(selectedClawDetailSection == section ? selectionTint.opacity(0.34) : Color.white.opacity(0.04), lineWidth: 1)
+                                .stroke(selectedClawDetailSection == section ? selectionTint.opacity(0.24) : panelStrokeColor, lineWidth: 1)
                         )
                     }
                     .buttonStyle(.plain)
@@ -1115,10 +1050,10 @@ struct ContentView: View {
         VStack(alignment: .leading, spacing: 8) {
             Text(t("Need the live settings surface?", "需要当前可用的设置界面？"))
                 .font(.headline)
-                .foregroundStyle(.white)
+                .foregroundStyle(WorkspaceChrome.textPrimary)
             Text(t("Jump back to the active Claw to edit runtime configuration or install another Claw.", "跳回活动 Claw 页面，就能编辑运行时配置或安装另一个 Claw。"))
                 .font(.footnote)
-                .foregroundStyle(.white.opacity(0.62))
+                .foregroundStyle(WorkspaceChrome.textSecondary)
         }
     }
 
@@ -1135,11 +1070,11 @@ struct ContentView: View {
             VStack(alignment: .leading, spacing: 16) {
                 Text(t("This Claw has a place, but not a full live link yet.", "这个 Claw 已经有位置，但还没有完整的实时连接。"))
                     .font(.system(size: ClawNestLayout.Typography.cardTitle, weight: .semibold))
-                    .foregroundStyle(.white)
+                    .foregroundStyle(WorkspaceChrome.textPrimary)
 
                 Text(t("You can already distinguish it, enter its detail home, and see its agents and reserved ports. Full remote lifecycle and telemetry support are still a placeholder.", "你已经可以区分它、进入它的主页，并查看它的 agents 和保留端口。完整的远程生命周期与遥测支持仍然是占位功能。"))
                     .font(.body)
-                    .foregroundStyle(.white.opacity(0.66))
+                    .foregroundStyle(WorkspaceChrome.textSecondary)
                     .fixedSize(horizontal: false, vertical: true)
 
                 detailFactsGrid(
@@ -1159,7 +1094,7 @@ struct ContentView: View {
             VStack(alignment: .leading, spacing: 14) {
                 Text(t("Overview", "概览"))
                     .font(.headline)
-                    .foregroundStyle(.white)
+                    .foregroundStyle(WorkspaceChrome.textPrimary)
 
                 detailFactsGrid(
                     layout: layout,
@@ -1171,7 +1106,7 @@ struct ContentView: View {
 
                 Text(t("Health, runtime controls, and install/repair actions are already real. Tasks, remote telemetry, and deeper per-Claw settings are staged into the new layout without pretending they are done.", "健康状态、运行控制和安装/修复操作已经是真实可用的。任务、远程遥测和更深的按 Claw 设置则已经被安放到新布局里，但不会伪装成已完成功能。"))
                     .font(.footnote)
-                    .foregroundStyle(.white.opacity(0.62))
+                    .foregroundStyle(WorkspaceChrome.textSecondary)
                     .fixedSize(horizontal: false, vertical: true)
             }
         }
@@ -1184,10 +1119,10 @@ struct ContentView: View {
                     VStack(alignment: .leading, spacing: 4) {
                         Text(agent.name)
                             .font(.headline)
-                            .foregroundStyle(.white)
+                            .foregroundStyle(WorkspaceChrome.textPrimary)
                         Text(agent.role)
                             .font(.subheadline)
-                            .foregroundStyle(.white.opacity(0.62))
+                            .foregroundStyle(WorkspaceChrome.textSecondary)
                     }
 
                     Spacer()
@@ -1237,10 +1172,10 @@ struct ContentView: View {
                     VStack(alignment: .leading, spacing: 5) {
                         Text(task.title)
                             .font(.headline)
-                            .foregroundStyle(.white)
+                            .foregroundStyle(WorkspaceChrome.textPrimary)
                         Text(task.detail)
                             .font(.subheadline)
-                            .foregroundStyle(.white.opacity(0.66))
+                            .foregroundStyle(WorkspaceChrome.textSecondary)
                             .fixedSize(horizontal: false, vertical: true)
                     }
 
@@ -1252,7 +1187,7 @@ struct ContentView: View {
                             .foregroundStyle(task.tint)
                         Text(task.timestamp.formatted(date: .abbreviated, time: .shortened))
                             .font(.caption.monospaced())
-                            .foregroundStyle(.white.opacity(0.48))
+                            .foregroundStyle(WorkspaceChrome.textQuaternary)
                     }
                 }
             }
@@ -1264,10 +1199,10 @@ struct ContentView: View {
             VStack(alignment: .leading, spacing: 12) {
                 Text(title)
                     .font(.headline)
-                    .foregroundStyle(.white)
+                    .foregroundStyle(WorkspaceChrome.textPrimary)
                 Text(body)
                     .font(.footnote)
-                    .foregroundStyle(.white.opacity(0.62))
+                    .foregroundStyle(WorkspaceChrome.textSecondary)
                     .fixedSize(horizontal: false, vertical: true)
             }
         }
@@ -1277,10 +1212,10 @@ struct ContentView: View {
         VStack(alignment: .leading, spacing: 4) {
             Text(title)
                 .font(.caption.weight(.semibold))
-                .foregroundStyle(.white.opacity(0.56))
+                .foregroundStyle(WorkspaceChrome.textTertiary)
             Text(value)
                 .font(.system(size: ClawNestLayout.Typography.statValue, weight: .semibold))
-                .foregroundStyle(.white)
+                .foregroundStyle(WorkspaceChrome.textPrimary)
         }
         .padding(12)
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -1295,10 +1230,10 @@ struct ContentView: View {
         VStack(alignment: .leading, spacing: 4) {
             Text(title)
                 .font(.caption2.weight(.semibold))
-                .foregroundStyle(.white.opacity(0.48))
+                .foregroundStyle(WorkspaceChrome.textQuaternary)
             Text(value)
                 .font(.caption.weight(.semibold))
-                .foregroundStyle(.white)
+                .foregroundStyle(WorkspaceChrome.textPrimary)
                 .lineLimit(1)
         }
         .padding(.horizontal, 12)
@@ -1306,7 +1241,7 @@ struct ContentView: View {
         .background(rowFillColor, in: RoundedRectangle(cornerRadius: ClawNestLayout.Radius.medium, style: .continuous))
         .overlay(
             RoundedRectangle(cornerRadius: ClawNestLayout.Radius.medium, style: .continuous)
-                .stroke(Color.white.opacity(0.04), lineWidth: 1)
+                .stroke(panelStrokeColor, lineWidth: 1)
         )
     }
 
@@ -1320,18 +1255,18 @@ struct ContentView: View {
         Button(action: action) {
             Label(title, systemImage: systemImage)
                 .font(.caption.weight(.semibold))
-                .foregroundStyle(disabled ? Color.white.opacity(0.42) : Color.white)
+                .foregroundStyle(disabled ? WorkspaceChrome.textQuaternary : WorkspaceChrome.textPrimary)
                 .frame(maxWidth: .infinity, minHeight: ClawNestLayout.Size.actionButtonMinHeight)
                 .padding(.vertical, 4)
         }
         .buttonStyle(.plain)
         .background(
             RoundedRectangle(cornerRadius: ClawNestLayout.Radius.medium, style: .continuous)
-                .fill(disabled ? Color.white.opacity(0.03) : rowFillColor)
+                .fill(disabled ? WorkspaceChrome.panelFill : rowFillColor)
         )
         .overlay(
             RoundedRectangle(cornerRadius: ClawNestLayout.Radius.medium, style: .continuous)
-                .stroke(disabled ? Color.white.opacity(0.04) : tint.opacity(0.18), lineWidth: 1)
+                .stroke(disabled ? panelStrokeColor : tint.opacity(0.18), lineWidth: 1)
         )
         .disabled(disabled)
     }
@@ -1339,7 +1274,7 @@ struct ContentView: View {
     private func warningBadge(_ badge: ClawAlertBadge) -> some View {
         Label(badge.label, systemImage: badge.systemImage)
             .font(.caption.weight(.semibold))
-            .foregroundStyle(.white)
+            .foregroundStyle(badge.tint)
             .padding(.horizontal, 10)
             .padding(.vertical, 6)
             .background(badge.tint.opacity(0.12), in: Capsule())
@@ -1353,10 +1288,10 @@ struct ContentView: View {
         VStack(alignment: .leading, spacing: 8) {
             Text(title)
                 .font(.caption.weight(.semibold))
-                .foregroundStyle(.white.opacity(0.56))
+                .foregroundStyle(WorkspaceChrome.textTertiary)
             Text(value)
                 .font(.system(.callout, design: .monospaced))
-                .foregroundStyle(.white)
+                .foregroundStyle(WorkspaceChrome.textPrimary)
                 .fixedSize(horizontal: false, vertical: true)
         }
         .padding(16)
@@ -1364,7 +1299,7 @@ struct ContentView: View {
         .background(rowFillColor, in: RoundedRectangle(cornerRadius: ClawNestLayout.Radius.medium, style: .continuous))
         .overlay(
             RoundedRectangle(cornerRadius: ClawNestLayout.Radius.medium, style: .continuous)
-                .stroke(Color.white.opacity(0.04), lineWidth: 1)
+                .stroke(panelStrokeColor, lineWidth: 1)
         )
     }
 
@@ -1413,16 +1348,16 @@ struct ContentView: View {
                             } label: {
                                 Text(filter.title)
                                     .font(.subheadline.weight(.semibold))
-                                    .foregroundStyle(.white)
+                                    .foregroundStyle(activeMomentFilterID == filter.id ? WorkspaceChrome.textPrimary : WorkspaceChrome.textSecondary)
                                     .padding(.horizontal, 14)
                                     .padding(.vertical, 10)
                                     .background(
                                         RoundedRectangle(cornerRadius: ClawNestLayout.Radius.medium, style: .continuous)
-                                            .fill(activeMomentFilterID == filter.id ? AnyShapeStyle(selectionTint.opacity(0.24)) : AnyShapeStyle(Color.white.opacity(0.03)))
+                                            .fill(activeMomentFilterID == filter.id ? AnyShapeStyle(WorkspaceChrome.selectionFill) : AnyShapeStyle(rowFillColor))
                                     )
                                     .overlay(
                                         RoundedRectangle(cornerRadius: ClawNestLayout.Radius.medium, style: .continuous)
-                                            .stroke(activeMomentFilterID == filter.id ? selectionTint.opacity(0.34) : Color.white.opacity(0.04), lineWidth: 1)
+                                            .stroke(activeMomentFilterID == filter.id ? selectionTint.opacity(0.24) : panelStrokeColor, lineWidth: 1)
                                     )
                             }
                             .buttonStyle(.plain)
@@ -1436,10 +1371,10 @@ struct ContentView: View {
                         VStack(alignment: .leading, spacing: 12) {
                             Text(t("No moments in this lane yet.", "这个分组里还没有动态。"))
                                 .font(.headline)
-                                .foregroundStyle(.white)
+                                .foregroundStyle(WorkspaceChrome.textPrimary)
                             Text(t("The filter is ready, but that Claw does not have any surfaced activity for now.", "筛选器已经就位，但这个 Claw 目前还没有可展示的动态。"))
                                 .font(.footnote)
-                                .foregroundStyle(.white.opacity(0.62))
+                                .foregroundStyle(WorkspaceChrome.textSecondary)
                         }
                     }
                 } else {
@@ -1470,17 +1405,17 @@ struct ContentView: View {
                         HStack(spacing: 10) {
                             Text(post.clawName)
                                 .font(.headline)
-                                .foregroundStyle(.white)
+                                .foregroundStyle(WorkspaceChrome.textPrimary)
                             labelPill(post.kindLabel, systemImage: post.iconName, tint: post.primaryColor)
                         }
 
                         Text(post.headline)
                             .font(.system(size: ClawNestLayout.Typography.cardTitle, weight: .semibold))
-                            .foregroundStyle(.white)
+                            .foregroundStyle(WorkspaceChrome.textPrimary)
 
                         Text(post.timestamp.formatted(date: .abbreviated, time: .shortened))
                             .font(.caption.monospaced())
-                            .foregroundStyle(.white.opacity(0.48))
+                            .foregroundStyle(WorkspaceChrome.textQuaternary)
                     }
 
                     Spacer()
@@ -1488,13 +1423,13 @@ struct ContentView: View {
 
                 Text(post.body)
                     .font(.body)
-                    .foregroundStyle(.white.opacity(0.70))
+                    .foregroundStyle(WorkspaceChrome.textSecondary)
                     .fixedSize(horizontal: false, vertical: true)
 
                 if let command = post.command {
                     Text(command)
                         .font(.system(.callout, design: .monospaced))
-                        .foregroundStyle(.white.opacity(0.72))
+                        .foregroundStyle(WorkspaceChrome.textSecondary)
                         .padding(12)
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .background(rowFillColor, in: RoundedRectangle(cornerRadius: ClawNestLayout.Radius.medium, style: .continuous))
@@ -1537,10 +1472,10 @@ struct ContentView: View {
                         VStack(alignment: .leading, spacing: 8) {
                             Text(t("Need actual controls?", "需要真正的控制入口？"))
                                 .font(.headline)
-                                .foregroundStyle(.white)
+                                .foregroundStyle(WorkspaceChrome.textPrimary)
                             Text(t("Open the current Claw for runtime settings and installer work, or Moments for the activity feed.", "去当前 Claw 页面查看运行时设置和安装功能，或者去 Moments 页面看动态流。"))
                                 .font(.footnote)
-                                .foregroundStyle(.white.opacity(0.62))
+                                .foregroundStyle(WorkspaceChrome.textSecondary)
                         }
 
                         Spacer()
@@ -1579,16 +1514,16 @@ struct ContentView: View {
                     VStack(alignment: .leading, spacing: 4) {
                         Text(t("You", "你"))
                             .font(.system(size: ClawNestLayout.Typography.threadTitle, weight: .semibold))
-                            .foregroundStyle(.white)
+                            .foregroundStyle(WorkspaceChrome.textPrimary)
                         Text(t("Claw keeper", "Claw 管理者"))
                             .font(.headline)
-                            .foregroundStyle(.white.opacity(0.66))
+                            .foregroundStyle(WorkspaceChrome.textSecondary)
                     }
                 }
 
                 Text(t("ClawNest already knows your active Mac, your current Claw, and the live feed of moments. Account sync, profile themes, and cross-device identity are still placeholders.", "ClawNest 已经知道你当前的 Mac、当前 Claw 和动态流。账号同步、主题和跨设备身份仍然是占位功能。"))
                     .font(.body)
-                    .foregroundStyle(.white.opacity(0.68))
+                    .foregroundStyle(WorkspaceChrome.textSecondary)
                     .fixedSize(horizontal: false, vertical: true)
 
                 detailFactsGrid(
@@ -1607,7 +1542,7 @@ struct ContentView: View {
             VStack(alignment: .leading, spacing: 16) {
                 Text(t("Connected devices", "已连接设备"))
                     .font(.headline)
-                    .foregroundStyle(.white)
+                    .foregroundStyle(WorkspaceChrome.textPrimary)
 
                 connectedDeviceRow(
                     name: Host.current().localizedName ?? "This Mac",
@@ -1633,12 +1568,12 @@ struct ContentView: View {
             VStack(alignment: .leading, spacing: 14) {
                 Text(t("Settings", "设置"))
                     .font(.headline)
-                    .foregroundStyle(.white)
+                    .foregroundStyle(WorkspaceChrome.textPrimary)
 
                 VStack(alignment: .leading, spacing: 8) {
                     Text(t("Language", "语言"))
                         .font(.caption.weight(.semibold))
-                        .foregroundStyle(.white.opacity(0.56))
+                        .foregroundStyle(WorkspaceChrome.textTertiary)
 
                     Picker("", selection: Binding(
                         get: { model.language },
@@ -1653,7 +1588,7 @@ struct ContentView: View {
 
                 Text(t("English is the default. Simplified Chinese is available for the app shell and key controls.", "默认语言为 English。现在支持将应用外壳和关键控件切换为简体中文。"))
                     .font(.footnote)
-                    .foregroundStyle(.white.opacity(0.62))
+                    .foregroundStyle(WorkspaceChrome.textSecondary)
                     .fixedSize(horizontal: false, vertical: true)
             }
         }
@@ -1664,10 +1599,10 @@ struct ContentView: View {
             VStack(alignment: .leading, spacing: 14) {
                 Text(t("Global preferences", "全局偏好"))
                     .font(.headline)
-                    .foregroundStyle(.white)
+                    .foregroundStyle(WorkspaceChrome.textPrimary)
                 Text(t("Notification routing, feed density, personality presets, and account-level privacy rules are reserved here. The UI is laid out, but these controls are intentionally left empty for now.", "通知方式、动态密度、人格预设和账号级隐私规则都会放在这里。界面先留好，功能暂时不接。"))
                     .font(.footnote)
-                    .foregroundStyle(.white.opacity(0.62))
+                    .foregroundStyle(WorkspaceChrome.textSecondary)
                     .fixedSize(horizontal: false, vertical: true)
             }
         }
@@ -1678,10 +1613,10 @@ struct ContentView: View {
             VStack(alignment: .leading, spacing: 14) {
                 Text(t("Personalization", "个性化"))
                     .font(.headline)
-                    .foregroundStyle(.white)
+                    .foregroundStyle(WorkspaceChrome.textPrimary)
                 Text(t("Avatar themes, nicknames for Claws, and warm profile customization belong on this page. Nothing is wired yet, so this remains a placeholder card.", "头像主题、Claw 昵称和更柔和的个人定制都会放在这里。目前还没接功能，所以先保留成占位卡片。"))
                     .font(.footnote)
-                    .foregroundStyle(.white.opacity(0.62))
+                    .foregroundStyle(WorkspaceChrome.textSecondary)
                     .fixedSize(horizontal: false, vertical: true)
             }
         }
@@ -1690,30 +1625,30 @@ struct ContentView: View {
     private func connectedDeviceRow(name: String, detail: String, isOnline: Bool) -> some View {
         HStack(spacing: 12) {
             Circle()
-                .fill(isOnline ? Color(red: 0.29, green: 0.88, blue: 0.53) : Color.white.opacity(0.16))
+                .fill(isOnline ? WorkspaceChrome.onlineDot : WorkspaceChrome.offlineDot)
                 .frame(width: 10, height: 10)
 
             VStack(alignment: .leading, spacing: 3) {
                 Text(name)
                     .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(.white)
+                    .foregroundStyle(WorkspaceChrome.textPrimary)
                 Text(detail)
                     .font(.caption)
-                    .foregroundStyle(.white.opacity(0.62))
+                    .foregroundStyle(WorkspaceChrome.textSecondary)
             }
 
             Spacer()
 
             Text(isOnline ? t("Connected", "已连接") : t("Soon", "即将支持"))
                 .font(.caption.weight(.semibold))
-                .foregroundStyle(.white.opacity(0.66))
+                .foregroundStyle(WorkspaceChrome.textSecondary)
         }
         .padding(14)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(rowFillColor, in: RoundedRectangle(cornerRadius: ClawNestLayout.Radius.medium, style: .continuous))
         .overlay(
             RoundedRectangle(cornerRadius: ClawNestLayout.Radius.medium, style: .continuous)
-                .stroke(Color.white.opacity(0.04), lineWidth: 1)
+                .stroke(panelStrokeColor, lineWidth: 1)
         )
     }
 
@@ -1723,23 +1658,23 @@ struct ContentView: View {
                 HStack {
                     Text(t("Claw presence", "Claw 状态"))
                         .font(.headline)
-                        .foregroundStyle(.white)
+                        .foregroundStyle(WorkspaceChrome.textPrimary)
                     Spacer()
                     statusDot(for: currentClaw.statusColor)
                 }
 
                 Text(model.snapshot.headline)
                     .font(.title3.weight(.semibold))
-                    .foregroundStyle(.white)
+                    .foregroundStyle(WorkspaceChrome.textPrimary)
 
                 Text(model.snapshot.detail)
                     .font(.footnote)
-                    .foregroundStyle(.white.opacity(0.62))
+                    .foregroundStyle(WorkspaceChrome.textSecondary)
                     .fixedSize(horizontal: false, vertical: true)
 
                 FlowLayout(spacing: 10, rowSpacing: 10) {
                     labelPill(model.snapshot.level.label(in: currentLanguage), systemImage: model.snapshot.level.iconName, tint: currentClaw.primaryColor)
-                    labelPill(model.snapshot.lastCheck.formatted(date: .omitted, time: .shortened), systemImage: "clock", tint: .white.opacity(0.18))
+                    labelPill(model.snapshot.lastCheck.formatted(date: .omitted, time: .shortened), systemImage: "clock", tint: WorkspaceChrome.strongStroke)
                 }
             }
         }
@@ -1750,7 +1685,7 @@ struct ContentView: View {
             VStack(alignment: .leading, spacing: 14) {
                 Text(t("Agent focus", "Agent 焦点"))
                     .font(.headline)
-                    .foregroundStyle(.white)
+                    .foregroundStyle(WorkspaceChrome.textPrimary)
 
                 ForEach(Array(currentClaw.agents.prefix(3))) { agent in
                     HStack(alignment: .top, spacing: 12) {
@@ -1766,13 +1701,13 @@ struct ContentView: View {
                         VStack(alignment: .leading, spacing: 4) {
                             Text(agent.name)
                                 .font(.subheadline.weight(.semibold))
-                                .foregroundStyle(.white)
+                                .foregroundStyle(WorkspaceChrome.textPrimary)
                             Text(agent.role)
                                 .font(.caption)
-                                .foregroundStyle(.white.opacity(0.62))
+                                .foregroundStyle(WorkspaceChrome.textSecondary)
                             Text(agent.status)
                                 .font(.caption.weight(.medium))
-                                .foregroundStyle(.white.opacity(0.48))
+                                .foregroundStyle(WorkspaceChrome.textQuaternary)
                         }
                         Spacer()
                     }
@@ -1785,14 +1720,14 @@ struct ContentView: View {
         VStack(alignment: .leading, spacing: ClawNestLayout.Spacing.small) {
             Text(eyebrow.uppercased())
                 .font(.caption.weight(.semibold))
-                .foregroundStyle(.white.opacity(0.50))
+                .foregroundStyle(WorkspaceChrome.textQuaternary)
                 .tracking(1.2)
             Text(title)
                 .font(.system(size: ClawNestLayout.Typography.workspaceTitle, weight: .semibold))
-                .foregroundStyle(.white)
+                .foregroundStyle(WorkspaceChrome.textPrimary)
             Text(subtitle)
                 .font(.subheadline)
-                .foregroundStyle(.white.opacity(0.64))
+                .foregroundStyle(WorkspaceChrome.textSecondary)
                 .fixedSize(horizontal: false, vertical: true)
         }
         .padding(.vertical, ClawNestLayout.Spacing.xSmall / 2)
@@ -1821,7 +1756,7 @@ struct ContentView: View {
                 .lineLimit(1)
         }
         .font(.caption.weight(.semibold))
-        .foregroundStyle(.white)
+        .foregroundStyle(WorkspaceChrome.textPrimary)
         .padding(.horizontal, 10)
         .padding(.vertical, 6)
         .background(tint.opacity(0.10), in: Capsule())
@@ -2014,7 +1949,7 @@ struct ContentView: View {
                 detail: t("Task history for non-current Claws has a reserved slot in the UI, but the data bridge is not wired yet.", "非当前 Claw 的任务历史已经在 UI 里预留位置，但数据桥还没有接上。"),
                 statusLabel: t("Soon", "即将支持"),
                 systemImage: "clock.arrow.2.circlepath",
-                tint: Color.white.opacity(0.72),
+                tint: WorkspaceChrome.textTertiary,
                 timestamp: selectedClaw.lastActiveAt
             ),
             ClawTaskSummary(
@@ -2261,7 +2196,7 @@ struct ContentView: View {
 
     private var momentFilters: [WorkspaceMomentFilter] {
         [
-            WorkspaceMomentFilter(id: WorkspaceMomentFilter.allID, title: t("All Claws", "所有 Claw"), color: Color.white.opacity(0.78))
+            WorkspaceMomentFilter(id: WorkspaceMomentFilter.allID, title: t("All Claws", "所有 Claw"), color: WorkspaceChrome.textSecondary)
         ] + claws.map {
             WorkspaceMomentFilter(id: $0.id, title: $0.name, color: $0.primaryColor)
         }
@@ -2510,7 +2445,7 @@ private struct StatusHeroView: View {
                         if isBusy {
                             Label(localized("Recovery action running", "恢复动作执行中", language: language), systemImage: "hourglass")
                                 .font(.footnote.weight(.semibold))
-                                .foregroundStyle(.white)
+                                .foregroundStyle(WorkspaceChrome.textPrimary)
                         }
                     }
                 }
@@ -2528,7 +2463,7 @@ private struct StatusHeroView: View {
                         if isBusy {
                             Label(localized("Recovery action running", "恢复动作执行中", language: language), systemImage: "hourglass")
                                 .font(.footnote.weight(.semibold))
-                                .foregroundStyle(.white)
+                                .foregroundStyle(WorkspaceChrome.textPrimary)
                         }
                     }
                 }
@@ -2536,7 +2471,7 @@ private struct StatusHeroView: View {
         }
         .padding(ClawNestLayout.Spacing.large)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Color.white.opacity(0.035), in: RoundedRectangle(cornerRadius: ClawNestLayout.Radius.xxLarge, style: .continuous))
+        .background(WorkspaceChrome.panelFill, in: RoundedRectangle(cornerRadius: ClawNestLayout.Radius.xxLarge, style: .continuous))
         .overlay(
             RoundedRectangle(cornerRadius: ClawNestLayout.Radius.xxLarge, style: .continuous)
                 .stroke(snapshot.level.tintColor.opacity(0.20), lineWidth: 1)
@@ -2560,11 +2495,11 @@ private struct StatusHeroView: View {
 
             Text(snapshot.headline)
                 .font(.system(size: ClawNestLayout.Typography.heroTitle, weight: .semibold))
-                .foregroundStyle(.white)
+                .foregroundStyle(WorkspaceChrome.textPrimary)
 
             Text(snapshot.detail)
                 .font(.body)
-                .foregroundStyle(.white.opacity(0.82))
+                .foregroundStyle(WorkspaceChrome.textSecondary)
                 .fixedSize(horizontal: false, vertical: true)
         }
     }
@@ -2573,17 +2508,17 @@ private struct StatusHeroView: View {
         VStack(alignment: alignment, spacing: 3) {
             Text(label)
                 .font(.caption.weight(.semibold))
-                .foregroundStyle(.white.opacity(0.62))
+                .foregroundStyle(WorkspaceChrome.textTertiary)
             Text(value)
                 .font(.system(.subheadline, design: .monospaced))
-                .foregroundStyle(.white)
+                .foregroundStyle(WorkspaceChrome.textPrimary)
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 10)
-        .background(Color.white.opacity(0.04), in: RoundedRectangle(cornerRadius: ClawNestLayout.Radius.small, style: .continuous))
+        .background(WorkspaceChrome.rowFill, in: RoundedRectangle(cornerRadius: ClawNestLayout.Radius.small, style: .continuous))
         .overlay(
             RoundedRectangle(cornerRadius: ClawNestLayout.Radius.small, style: .continuous)
-                .stroke(Color.white.opacity(0.05), lineWidth: 1)
+                .stroke(WorkspaceChrome.panelStroke, lineWidth: 1)
         )
     }
 }
@@ -2604,24 +2539,24 @@ private struct ControlPanelView: View {
                         Image(systemName: action.systemImage)
                             .font(.system(size: 16, weight: .semibold))
                             .frame(width: 28)
-                            .foregroundStyle(index == 0 ? Color.white : model.snapshot.level.tintColor)
+                            .foregroundStyle(index == 0 ? WorkspaceChrome.textPrimary : model.snapshot.level.tintColor)
 
                         VStack(alignment: .leading, spacing: 4) {
                             Text(action.title(in: language))
                                 .font(.headline)
-                                .foregroundStyle(.white)
+                                .foregroundStyle(WorkspaceChrome.textPrimary)
                             Text(action.subtitle(in: language))
                                 .font(.caption)
-                                .foregroundStyle(.white.opacity(0.62))
+                                .foregroundStyle(WorkspaceChrome.textSecondary)
                                 .fixedSize(horizontal: false, vertical: true)
                         }
                         Spacer()
                     }
                     .padding(14)
-                    .background((index == 0 ? model.snapshot.level.tintColor.opacity(0.16) : Color.white.opacity(0.03)), in: RoundedRectangle(cornerRadius: ClawNestLayout.Radius.medium, style: .continuous))
+                    .background((index == 0 ? WorkspaceChrome.selectionFill : WorkspaceChrome.rowFill), in: RoundedRectangle(cornerRadius: ClawNestLayout.Radius.medium, style: .continuous))
                     .overlay(
                         RoundedRectangle(cornerRadius: ClawNestLayout.Radius.medium, style: .continuous)
-                            .stroke(index == 0 ? model.snapshot.level.tintColor.opacity(0.24) : Color.white.opacity(0.05), lineWidth: 1)
+                            .stroke(index == 0 ? model.snapshot.level.tintColor.opacity(0.24) : WorkspaceChrome.panelStroke, lineWidth: 1)
                     )
                 }
                 .buttonStyle(.plain)
@@ -2631,10 +2566,10 @@ private struct ControlPanelView: View {
         .padding(ClawNestLayout.Spacing.large + 2)
         .background(
             RoundedRectangle(cornerRadius: ClawNestLayout.Radius.xLarge, style: .continuous)
-                .fill(Color.white.opacity(0.035))
+                .fill(WorkspaceChrome.panelFill)
                 .overlay(
                     RoundedRectangle(cornerRadius: ClawNestLayout.Radius.xLarge, style: .continuous)
-                        .stroke(Color.white.opacity(0.07), lineWidth: 1)
+                        .stroke(WorkspaceChrome.panelStroke, lineWidth: 1)
                 )
         )
     }
@@ -2654,18 +2589,18 @@ private struct MetricsPanelView: View {
                     VStack(alignment: .leading, spacing: 8) {
                         Text(metric.label)
                             .font(.caption.weight(.semibold))
-                            .foregroundStyle(.white.opacity(0.52))
+                            .foregroundStyle(WorkspaceChrome.textQuaternary)
                         Text(metric.value)
                             .font(.system(.body, design: .monospaced))
-                            .foregroundStyle(.white)
+                            .foregroundStyle(WorkspaceChrome.textPrimary)
                             .lineLimit(4)
                             .frame(maxWidth: .infinity, alignment: .leading)
                     }
                     .padding(16)
-                    .background(Color.white.opacity(0.03), in: RoundedRectangle(cornerRadius: ClawNestLayout.Radius.medium, style: .continuous))
+                    .background(WorkspaceChrome.rowFill, in: RoundedRectangle(cornerRadius: ClawNestLayout.Radius.medium, style: .continuous))
                     .overlay(
                         RoundedRectangle(cornerRadius: ClawNestLayout.Radius.medium, style: .continuous)
-                            .stroke(Color.white.opacity(0.04), lineWidth: 1)
+                            .stroke(WorkspaceChrome.panelStroke, lineWidth: 1)
                     )
                 }
             }
@@ -2674,10 +2609,10 @@ private struct MetricsPanelView: View {
         .padding(ClawNestLayout.Spacing.large + 2)
         .background(
             RoundedRectangle(cornerRadius: ClawNestLayout.Radius.xLarge, style: .continuous)
-                .fill(Color.white.opacity(0.035))
+                .fill(WorkspaceChrome.panelFill)
                 .overlay(
                     RoundedRectangle(cornerRadius: ClawNestLayout.Radius.xLarge, style: .continuous)
-                        .stroke(Color.white.opacity(0.07), lineWidth: 1)
+                        .stroke(WorkspaceChrome.panelStroke, lineWidth: 1)
                 )
         )
     }
@@ -2721,10 +2656,10 @@ private struct DashboardPanelView: View {
         .padding(ClawNestLayout.Spacing.large + 2)
         .background(
             RoundedRectangle(cornerRadius: ClawNestLayout.Radius.xLarge, style: .continuous)
-                .fill(Color.white.opacity(0.035))
+                .fill(WorkspaceChrome.panelFill)
                 .overlay(
                     RoundedRectangle(cornerRadius: ClawNestLayout.Radius.xLarge, style: .continuous)
-                        .stroke(Color.white.opacity(0.07), lineWidth: 1)
+                        .stroke(WorkspaceChrome.panelStroke, lineWidth: 1)
                 )
         )
     }
@@ -2736,20 +2671,24 @@ private struct DashboardPanelView: View {
     @ViewBuilder
     private var overlayView: some View {
         RoundedRectangle(cornerRadius: ClawNestLayout.Radius.large, style: .continuous)
-            .fill(Color.black.opacity(0.46))
+            .fill(WorkspaceChrome.overlayFill)
+            .overlay(
+                RoundedRectangle(cornerRadius: ClawNestLayout.Radius.large, style: .continuous)
+                    .stroke(WorkspaceChrome.panelStroke, lineWidth: 1)
+            )
             .overlay {
                 VStack(spacing: 14) {
                     Image(systemName: overlayIcon)
                         .font(.system(size: ClawNestLayout.Typography.overlayIcon, weight: .semibold))
-                        .foregroundStyle(.white)
+                        .foregroundStyle(model.snapshot.level.tintColor)
 
                     Text(overlayTitle)
                         .font(.headline)
-                        .foregroundStyle(.white)
+                        .foregroundStyle(WorkspaceChrome.textPrimary)
 
                     Text(overlayMessage)
                         .font(.body)
-                        .foregroundStyle(.white.opacity(0.82))
+                        .foregroundStyle(WorkspaceChrome.textSecondary)
                         .multilineTextAlignment(.center)
                         .frame(maxWidth: ClawNestLayout.Size.overlayTextWidth)
 
@@ -2815,7 +2754,7 @@ private struct ActivityFeedView: View {
             if entries.isEmpty {
                 Text(localized("No moments yet.", "还没有动态。", language: language))
                     .font(.subheadline)
-                    .foregroundStyle(.white.opacity(0.56))
+                    .foregroundStyle(WorkspaceChrome.textTertiary)
             } else {
                 LazyVStack(spacing: 12) {
                     ForEach(entries) { entry in
@@ -2823,21 +2762,21 @@ private struct ActivityFeedView: View {
                             HStack {
                                 Text(entry.title)
                                     .font(.headline)
-                                    .foregroundStyle(.white)
+                                    .foregroundStyle(WorkspaceChrome.textPrimary)
                                 Spacer()
                                 Text(entry.timestamp.formatted(date: .omitted, time: .standard))
                                     .font(.caption.monospaced())
-                                    .foregroundStyle(.white.opacity(0.48))
+                                    .foregroundStyle(WorkspaceChrome.textQuaternary)
                             }
 
                             Text(entry.message)
                                 .font(.subheadline)
-                                .foregroundStyle(.white.opacity(0.68))
+                                .foregroundStyle(WorkspaceChrome.textSecondary)
 
                             if let command = entry.command {
                                 Text(command)
                                     .font(.caption.monospaced())
-                                    .foregroundStyle(.white.opacity(0.52))
+                                    .foregroundStyle(WorkspaceChrome.textQuaternary)
                             }
                         }
                         .padding(16)
@@ -2851,10 +2790,10 @@ private struct ActivityFeedView: View {
         .padding(ClawNestLayout.Spacing.large + 2)
         .background(
             RoundedRectangle(cornerRadius: ClawNestLayout.Radius.xLarge, style: .continuous)
-                .fill(Color.white.opacity(0.035))
+                .fill(WorkspaceChrome.panelFill)
                 .overlay(
                     RoundedRectangle(cornerRadius: ClawNestLayout.Radius.xLarge, style: .continuous)
-                        .stroke(Color.white.opacity(0.07), lineWidth: 1)
+                        .stroke(WorkspaceChrome.panelStroke, lineWidth: 1)
                 )
         )
     }
@@ -2862,13 +2801,13 @@ private struct ActivityFeedView: View {
     private func backgroundColor(for level: DiagnosticLevel) -> Color {
         switch level {
         case .success:
-            return Color(red: 0.19, green: 0.33, blue: 0.27).opacity(0.38)
+            return Color(red: 0.89, green: 0.95, blue: 0.90)
         case .info:
-            return Color.white.opacity(0.03)
+            return WorkspaceChrome.rowFill
         case .warning:
-            return Color(red: 0.37, green: 0.29, blue: 0.14).opacity(0.32)
+            return Color(red: 0.97, green: 0.94, blue: 0.87)
         case .error:
-            return Color(red: 0.39, green: 0.20, blue: 0.22).opacity(0.34)
+            return Color(red: 0.97, green: 0.90, blue: 0.90)
         }
     }
 }
@@ -2886,29 +2825,33 @@ private struct LatestLogView: View {
             VStack(alignment: .leading, spacing: 10) {
                 Text(summary?.path ?? localized("No OpenClaw log file was found under /tmp/openclaw yet.", "在 /tmp/openclaw 下还没有找到 OpenClaw 日志。", language: language))
                     .font(.caption.monospaced())
-                    .foregroundStyle(.white.opacity(0.52))
+                    .foregroundStyle(WorkspaceChrome.textQuaternary)
                 Divider()
-                    .overlay(Color.white.opacity(0.08))
+                    .overlay(WorkspaceChrome.divider)
                 ScrollView {
                     Text(summary?.excerpt ?? rawProbe.ifEmpty(localized("No log excerpt or raw probe payload is available yet.", "还没有日志摘录或原始探测内容。", language: language)))
                         .font(.system(.callout, design: .monospaced))
-                        .foregroundStyle(.white)
+                        .foregroundStyle(WorkspaceChrome.textPrimary)
                         .textSelection(.enabled)
                         .frame(maxWidth: .infinity, alignment: .leading)
                 }
                 .frame(minHeight: logMinHeight)
             }
             .padding(ClawNestLayout.Spacing.large - 2)
-            .background(Color.black.opacity(0.78), in: RoundedRectangle(cornerRadius: ClawNestLayout.Radius.medium, style: .continuous))
+            .background(WorkspaceChrome.codeFill, in: RoundedRectangle(cornerRadius: ClawNestLayout.Radius.medium, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: ClawNestLayout.Radius.medium, style: .continuous)
+                    .stroke(WorkspaceChrome.codeStroke, lineWidth: 1)
+            )
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(ClawNestLayout.Spacing.large + 2)
         .background(
             RoundedRectangle(cornerRadius: ClawNestLayout.Radius.xLarge, style: .continuous)
-                .fill(Color.white.opacity(0.035))
+                .fill(WorkspaceChrome.panelFill)
                 .overlay(
                     RoundedRectangle(cornerRadius: ClawNestLayout.Radius.xLarge, style: .continuous)
-                        .stroke(Color.white.opacity(0.07), lineWidth: 1)
+                        .stroke(WorkspaceChrome.panelStroke, lineWidth: 1)
                 )
         )
     }
@@ -2968,7 +2911,7 @@ private struct OpenClawInstallView: View {
                 VStack(alignment: .leading, spacing: 12) {
                     Text(installStatusMessage)
                         .font(.system(.callout, design: .monospaced))
-                        .foregroundStyle(.white.opacity(0.70))
+                        .foregroundStyle(WorkspaceChrome.textSecondary)
                         .textSelection(.enabled)
                         .frame(maxWidth: .infinity, alignment: .leading)
 
@@ -2987,7 +2930,7 @@ private struct OpenClawInstallView: View {
                         installButton
                         Text(localized("Every install gets its own state, workspace, and reserved port range.", "每次安装都会创建独立 state、workspace 和保留端口范围。", language: language))
                             .font(.caption)
-                            .foregroundStyle(.white.opacity(0.56))
+                            .foregroundStyle(WorkspaceChrome.textTertiary)
                             .fixedSize(horizontal: false, vertical: true)
                     }
                 } else {
@@ -2995,7 +2938,7 @@ private struct OpenClawInstallView: View {
                         installButton
                         Text(localized("Every install gets its own state, workspace, and reserved port range.", "每次安装都会创建独立 state、workspace 和保留端口范围。", language: language))
                             .font(.caption)
-                            .foregroundStyle(.white.opacity(0.56))
+                            .foregroundStyle(WorkspaceChrome.textTertiary)
                             .fixedSize(horizontal: false, vertical: true)
                     }
                 }
@@ -3004,10 +2947,10 @@ private struct OpenClawInstallView: View {
         .padding(ClawNestLayout.Spacing.large + 2)
         .background(
             RoundedRectangle(cornerRadius: ClawNestLayout.Radius.xLarge, style: .continuous)
-                .fill(Color.white.opacity(0.035))
+                .fill(WorkspaceChrome.panelFill)
                 .overlay(
                     RoundedRectangle(cornerRadius: ClawNestLayout.Radius.xLarge, style: .continuous)
-                        .stroke(Color.white.opacity(0.07), lineWidth: 1)
+                        .stroke(WorkspaceChrome.panelStroke, lineWidth: 1)
                 )
         )
     }
@@ -3016,7 +2959,7 @@ private struct OpenClawInstallView: View {
         VStack(alignment: .leading, spacing: 14) {
             Text(localized("Install directory", "安装目录", language: language))
                 .font(.caption.weight(.semibold))
-                .foregroundStyle(.white.opacity(0.56))
+                .foregroundStyle(WorkspaceChrome.textTertiary)
 
             HStack(spacing: 10) {
                 TextField(localized("Install directory", "安装目录", language: language), text: directoryBinding)
@@ -3036,7 +2979,7 @@ private struct OpenClawInstallView: View {
         VStack(alignment: .leading, spacing: 14) {
             Text(localized("Gateway port", "网关端口", language: language))
                 .font(.caption.weight(.semibold))
-                .foregroundStyle(.white.opacity(0.56))
+                .foregroundStyle(WorkspaceChrome.textTertiary)
 
             TextField("19789", text: portBinding)
                 .textFieldStyle(.roundedBorder)
@@ -3050,25 +2993,25 @@ private struct OpenClawInstallView: View {
             model.installOpenClaw()
         }
         .buttonStyle(.borderedProminent)
-        .tint(Color(red: 0.43, green: 0.57, blue: 0.78))
+        .tint(WorkspaceChrome.selectionTint)
         .disabled(model.isInstallingOpenClaw || !model.installValidation.isValid)
     }
 
     private var validationBanner: some View {
         Text(model.installValidation.message)
             .font(.subheadline.weight(.medium))
-            .foregroundStyle(.white)
+            .foregroundStyle(WorkspaceChrome.textPrimary)
             .padding(14)
             .frame(maxWidth: .infinity, alignment: .leading)
             .background(
                 (model.installValidation.isValid
-                    ? Color(red: 0.21, green: 0.33, blue: 0.27).opacity(0.60)
-                    : Color(red: 0.39, green: 0.20, blue: 0.22).opacity(0.60)),
+                    ? Color(red: 0.89, green: 0.95, blue: 0.90)
+                    : Color(red: 0.97, green: 0.90, blue: 0.90)),
                 in: RoundedRectangle(cornerRadius: ClawNestLayout.Radius.medium - 2, style: .continuous)
             )
             .overlay(
                 RoundedRectangle(cornerRadius: ClawNestLayout.Radius.medium - 2, style: .continuous)
-                    .stroke(model.installValidation.isValid ? Color(red: 0.32, green: 0.51, blue: 0.42).opacity(0.60) : Color(red: 0.58, green: 0.33, blue: 0.35).opacity(0.65), lineWidth: 1)
+                    .stroke(model.installValidation.isValid ? Color(red: 0.72, green: 0.84, blue: 0.74) : Color(red: 0.88, green: 0.74, blue: 0.75), lineWidth: 1)
             )
     }
 
@@ -3085,19 +3028,19 @@ private struct OpenClawInstallView: View {
         VStack(alignment: .leading, spacing: 8) {
             Text(label)
                 .font(.caption.weight(.semibold))
-                .foregroundStyle(.white.opacity(0.56))
+                .foregroundStyle(WorkspaceChrome.textTertiary)
             Text(value)
                 .font(.system(.callout, design: .monospaced))
-                .foregroundStyle(.white)
+                .foregroundStyle(WorkspaceChrome.textPrimary)
                 .lineLimit(4)
                 .frame(maxWidth: .infinity, alignment: .leading)
         }
         .padding(16)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Color.white.opacity(0.03), in: RoundedRectangle(cornerRadius: ClawNestLayout.Radius.medium - 2, style: .continuous))
+        .background(WorkspaceChrome.rowFill, in: RoundedRectangle(cornerRadius: ClawNestLayout.Radius.medium - 2, style: .continuous))
         .overlay(
             RoundedRectangle(cornerRadius: ClawNestLayout.Radius.medium - 2, style: .continuous)
-                .stroke(Color.white.opacity(0.04), lineWidth: 1)
+                .stroke(WorkspaceChrome.panelStroke, lineWidth: 1)
         )
     }
 
@@ -3105,33 +3048,33 @@ private struct OpenClawInstallView: View {
         VStack(alignment: .leading, spacing: 12) {
             Text(localized("Known Claws", "已知 Claw", language: language))
                 .font(.headline)
-                .foregroundStyle(.white)
+                .foregroundStyle(WorkspaceChrome.textPrimary)
 
             ForEach(model.knownOpenClawInstances) { instance in
                 HStack(alignment: .top, spacing: 12) {
                     Text(String(instance.gatewayPort))
                         .font(.system(.body, design: .monospaced))
-                        .foregroundStyle(.white)
+                        .foregroundStyle(WorkspaceChrome.textPrimary)
                         .padding(.horizontal, 10)
                         .padding(.vertical, 6)
-                        .background(Color.white.opacity(0.06), in: Capsule())
+                        .background(WorkspaceChrome.selectionFill, in: Capsule())
 
                     VStack(alignment: .leading, spacing: 4) {
                         Text(instance.launchAgentLabel)
                             .font(.subheadline.weight(.semibold))
-                            .foregroundStyle(.white)
+                            .foregroundStyle(WorkspaceChrome.textPrimary)
                         Text(instance.installDirectoryPath)
                             .font(.caption.monospaced())
-                            .foregroundStyle(.white.opacity(0.56))
+                            .foregroundStyle(WorkspaceChrome.textTertiary)
                     }
 
                     Spacer()
                 }
                 .padding(14)
-                .background(Color.white.opacity(0.03), in: RoundedRectangle(cornerRadius: ClawNestLayout.Radius.medium - 2, style: .continuous))
+                .background(WorkspaceChrome.rowFill, in: RoundedRectangle(cornerRadius: ClawNestLayout.Radius.medium - 2, style: .continuous))
                 .overlay(
                     RoundedRectangle(cornerRadius: ClawNestLayout.Radius.medium - 2, style: .continuous)
-                        .stroke(Color.white.opacity(0.04), lineWidth: 1)
+                        .stroke(WorkspaceChrome.panelStroke, lineWidth: 1)
                 )
             }
         }
@@ -3200,7 +3143,7 @@ private struct ConfigurationEditorView: View {
                     onSave(draft)
                 }
                 .buttonStyle(.borderedProminent)
-                .tint(Color(red: 0.43, green: 0.57, blue: 0.78))
+                .tint(WorkspaceChrome.selectionTint)
                 .disabled(isBusy || draft == configuration)
 
                 Button(localized("Reset to Defaults", "恢复默认", language: language)) {
@@ -3214,10 +3157,10 @@ private struct ConfigurationEditorView: View {
         .padding(ClawNestLayout.Spacing.large + 2)
         .background(
             RoundedRectangle(cornerRadius: ClawNestLayout.Radius.xLarge, style: .continuous)
-                .fill(Color.white.opacity(0.035))
+                .fill(WorkspaceChrome.panelFill)
                 .overlay(
                     RoundedRectangle(cornerRadius: ClawNestLayout.Radius.xLarge, style: .continuous)
-                        .stroke(Color.white.opacity(0.07), lineWidth: 1)
+                        .stroke(WorkspaceChrome.panelStroke, lineWidth: 1)
                 )
         )
         .onChange(of: configuration) { _, newValue in
@@ -3237,23 +3180,23 @@ private struct ConfigurationEditorView: View {
         VStack(alignment: .leading, spacing: 14) {
             Text(localized("Probe interval", "探测间隔", language: language))
                 .font(.caption.weight(.semibold))
-                .foregroundStyle(.white.opacity(0.56))
+                .foregroundStyle(WorkspaceChrome.textTertiary)
 
             HStack {
                 Slider(value: $draft.probeIntervalSeconds, in: 15 ... 180, step: 15)
                 Text("\(Int(draft.probeIntervalSeconds))s")
                     .font(.system(.body, design: .monospaced))
-                    .foregroundStyle(.white)
+                    .foregroundStyle(WorkspaceChrome.textPrimary)
                     .frame(width: ClawNestLayout.Size.sliderValueWidth)
             }
 
             Toggle(localized("Allow automatic gateway restart after repeated offline probes", "连续离线探测后允许自动重启网关", language: language), isOn: $draft.autoRestartEnabled)
                 .toggleStyle(.switch)
-                .foregroundStyle(.white)
+                .foregroundStyle(WorkspaceChrome.textPrimary)
 
             Text(localized("Still off by default. Leave it disabled if OpenClaw TUI and WebUI are already healthy and you only want passive monitoring.", "默认仍然关闭。如果 OpenClaw 的 TUI 和 WebUI 已经稳定，同时你只想被动监控，就继续保持关闭。", language: language))
                 .font(.caption)
-                .foregroundStyle(.white.opacity(0.56))
+                .foregroundStyle(WorkspaceChrome.textTertiary)
                 .fixedSize(horizontal: false, vertical: true)
         }
     }
@@ -3262,7 +3205,7 @@ private struct ConfigurationEditorView: View {
         VStack(alignment: .leading, spacing: 6) {
             Text(title)
                 .font(.caption.weight(.semibold))
-                .foregroundStyle(.white.opacity(0.56))
+                .foregroundStyle(WorkspaceChrome.textTertiary)
             TextField(title, text: text)
                 .textFieldStyle(.roundedBorder)
                 .font(.system(.body, design: .monospaced))
@@ -3274,10 +3217,10 @@ private func panelHeader(title: String, subtitle: String) -> some View {
     VStack(alignment: .leading, spacing: 6) {
         Text(title)
             .font(.system(size: ClawNestLayout.Typography.sectionTitle, weight: .semibold))
-            .foregroundStyle(.white)
+            .foregroundStyle(WorkspaceChrome.textPrimary)
         Text(subtitle)
             .font(.subheadline)
-            .foregroundStyle(.white.opacity(0.62))
+            .foregroundStyle(WorkspaceChrome.textSecondary)
             .fixedSize(horizontal: false, vertical: true)
     }
 }
