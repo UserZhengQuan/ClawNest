@@ -8,6 +8,7 @@ final class AppModel: ObservableObject {
     @Published var configuration: ClawNestConfiguration
     @Published var language: AppLanguage
     @Published var installSnapshot: OpenClawInstallerSnapshot
+    @Published var installProgress: OpenClawInstallProgress
     @Published var installStatusMessage: String?
     @Published var isInstallingOpenClaw = false
     @Published var dashboardWebError: String?
@@ -39,6 +40,7 @@ final class AppModel: ObservableObject {
             message: "Checking whether OpenClaw CLI is available on this Mac.",
             nextStep: "If it is missing, install it here and continue with the official onboarding flow."
         )
+        self.installProgress = .idle
         self.snapshot = .placeholder(configuration: configuration)
         self.supervisor = GatewaySupervisor(
             configuration: configuration,

@@ -75,8 +75,14 @@ private actor ScriptedCommandRunner: CommandRunning {
         self.healthResults = healthResults
     }
 
-    func run(command: String, arguments: [String], environment: [String : String]) async -> CommandResult {
+    func run(
+        command: String,
+        arguments: [String],
+        environment: [String : String],
+        outputHandler: (@Sendable (CommandOutputChunk) -> Void)?
+    ) async -> CommandResult {
         commands.append(([command] + arguments).joined(separator: " "))
+        _ = outputHandler
 
         if command == "openclaw", arguments == ["health", "--json"] {
             if !healthResults.isEmpty {
