@@ -38,35 +38,37 @@ struct ContentView: View {
         localized(english, simplifiedChinese, language: currentLanguage)
     }
 
+    private var selectionTint: Color {
+        Color(red: 0.42, green: 0.55, blue: 0.77)
+    }
+
+    private var panelFillColor: Color {
+        Color.white.opacity(0.035)
+    }
+
+    private var rowFillColor: Color {
+        Color.white.opacity(0.022)
+    }
+
+    private var panelStrokeColor: Color {
+        Color.white.opacity(0.07)
+    }
+
     private func background(layout: WorkspaceLayoutMetrics) -> some View {
         ZStack {
+            Color(red: 0.11, green: 0.12, blue: 0.14)
+                .ignoresSafeArea()
+
             LinearGradient(
-                colors: [
-                    Color(red: 0.10, green: 0.08, blue: 0.11),
-                    Color(red: 0.15, green: 0.12, blue: 0.16),
-                    Color(red: 0.08, green: 0.11, blue: 0.16)
-                ],
+                colors: [.white.opacity(0.04), .clear],
                 startPoint: .topLeading,
                 endPoint: .bottomTrailing
             )
             .ignoresSafeArea()
 
-            Circle()
-                .fill(Color(red: 0.95, green: 0.54, blue: 0.32).opacity(0.18))
-                .frame(width: layout.isCompactHeight ? 340 : 420, height: layout.isCompactHeight ? 340 : 420)
-                .blur(radius: 80)
-                .offset(x: -340, y: -260)
-
-            Circle()
-                .fill(Color(red: 0.28, green: 0.67, blue: 0.93).opacity(0.18))
-                .frame(width: layout.isCompactHeight ? 360 : 440, height: layout.isCompactHeight ? 360 : 440)
-                .blur(radius: 90)
-                .offset(x: 420, y: 280)
-
             RoundedRectangle(cornerRadius: ClawNestLayout.Radius.canvas, style: .continuous)
-                .fill(.white.opacity(0.03))
+                .fill(.white.opacity(0.015))
                 .padding(ClawNestLayout.Spacing.small)
-                .blur(radius: 2)
         }
     }
 
@@ -86,39 +88,33 @@ struct ContentView: View {
         .frame(maxHeight: .infinity, alignment: .top)
         .background(
             RoundedRectangle(cornerRadius: ClawNestLayout.Radius.shell, style: .continuous)
-                .fill(.black.opacity(0.26))
+                .fill(panelFillColor)
                 .overlay(
                     RoundedRectangle(cornerRadius: ClawNestLayout.Radius.shell, style: .continuous)
-                        .stroke(Color.white.opacity(0.06), lineWidth: 1)
+                        .stroke(panelStrokeColor, lineWidth: 1)
                 )
         )
     }
 
     private var sidebarBrandSection: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            HStack(spacing: 14) {
+        VStack(alignment: .leading, spacing: ClawNestLayout.Spacing.medium) {
+            HStack(spacing: ClawNestLayout.Spacing.medium) {
                 ZStack {
-                    Circle()
-                        .fill(
-                            LinearGradient(
-                                colors: [Color(red: 0.98, green: 0.66, blue: 0.38), Color(red: 0.86, green: 0.34, blue: 0.28)],
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
-                            )
-                        )
+                    RoundedRectangle(cornerRadius: ClawNestLayout.Radius.medium, style: .continuous)
+                        .fill(selectionTint.opacity(0.20))
                     Image(systemName: "pawprint.fill")
-                        .font(.system(size: ClawNestLayout.Typography.avatarIcon, weight: .bold))
-                        .foregroundStyle(.white)
+                        .font(.system(size: ClawNestLayout.Typography.avatarIcon, weight: .semibold))
+                        .foregroundStyle(selectionTint)
                 }
                 .frame(width: ClawNestLayout.Size.sidebarLogo, height: ClawNestLayout.Size.sidebarLogo)
 
                 VStack(alignment: .leading, spacing: 3) {
                     Text("ClawNest")
-                        .font(.system(size: ClawNestLayout.Typography.brand, weight: .bold, design: .rounded))
+                        .font(.system(size: ClawNestLayout.Typography.brand, weight: .semibold))
                         .foregroundStyle(.white)
                     Text(t("A companion workspace for every Claw", "每个 Claw 的陪伴式工作台"))
-                        .font(.subheadline)
-                        .foregroundStyle(.white.opacity(0.62))
+                        .font(.footnote)
+                        .foregroundStyle(.white.opacity(0.60))
                 }
             }
 
@@ -138,7 +134,7 @@ struct ContentView: View {
             }
             .padding(14)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .background(Color.white.opacity(0.04), in: RoundedRectangle(cornerRadius: ClawNestLayout.Radius.medium, style: .continuous))
+            .background(rowFillColor, in: RoundedRectangle(cornerRadius: ClawNestLayout.Radius.medium, style: .continuous))
         }
     }
 
@@ -169,7 +165,7 @@ struct ContentView: View {
 
                 Spacer()
             }
-            .foregroundStyle(selectedSection == section ? Color.black : Color.white)
+            .foregroundStyle(.white)
             .padding(.horizontal, 14)
             .padding(.vertical, 13)
             .background(sectionBackground(isSelected: selectedSection == section))
@@ -190,7 +186,7 @@ struct ContentView: View {
         }
         .padding(16)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Color.white.opacity(0.04), in: RoundedRectangle(cornerRadius: 26, style: .continuous))
+        .background(rowFillColor, in: RoundedRectangle(cornerRadius: ClawNestLayout.Radius.medium, style: .continuous))
     }
 
     private var sidebarFooterSection: some View {
@@ -208,28 +204,19 @@ struct ContentView: View {
         }
         .padding(16)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(
-            LinearGradient(
-                colors: [currentClaw.primaryColor.opacity(0.34), currentClaw.secondaryColor.opacity(0.16)],
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            ),
-            in: RoundedRectangle(cornerRadius: 26, style: .continuous)
-        )
+        .background(rowFillColor, in: RoundedRectangle(cornerRadius: ClawNestLayout.Radius.medium, style: .continuous))
     }
 
     private func sectionBackground(isSelected: Bool) -> some View {
         RoundedRectangle(cornerRadius: ClawNestLayout.Radius.medium, style: .continuous)
             .fill(
                 isSelected
-                    ? AnyShapeStyle(
-                        LinearGradient(
-                            colors: [Color(red: 0.99, green: 0.72, blue: 0.42), Color(red: 0.93, green: 0.48, blue: 0.33)],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        )
-                    )
-                    : AnyShapeStyle(Color.white.opacity(0.04))
+                    ? AnyShapeStyle(selectionTint.opacity(0.24))
+                    : AnyShapeStyle(Color.white.opacity(0.02))
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: ClawNestLayout.Radius.medium, style: .continuous)
+                    .stroke(isSelected ? selectionTint.opacity(0.34) : Color.white.opacity(0.04), lineWidth: 1)
             )
     }
 
@@ -356,11 +343,11 @@ struct ContentView: View {
                             .padding(16)
                             .frame(maxWidth: .infinity, alignment: .leading)
                             .background(
-                                RoundedRectangle(cornerRadius: 24, style: .continuous)
-                                    .fill(selectedConversation.id == thread.id ? Color.white.opacity(0.10) : Color.white.opacity(0.04))
+                                RoundedRectangle(cornerRadius: ClawNestLayout.Radius.xLarge, style: .continuous)
+                                    .fill(selectedConversation.id == thread.id ? selectionTint.opacity(0.14) : rowFillColor)
                                     .overlay(
-                                        RoundedRectangle(cornerRadius: 24, style: .continuous)
-                                            .stroke(selectedConversation.id == thread.id ? thread.primaryColor.opacity(0.52) : Color.white.opacity(0.05), lineWidth: 1)
+                                        RoundedRectangle(cornerRadius: ClawNestLayout.Radius.xLarge, style: .continuous)
+                                            .stroke(selectedConversation.id == thread.id ? selectionTint.opacity(0.34) : Color.white.opacity(0.05), lineWidth: 1)
                                     )
                             )
                         }
@@ -417,7 +404,7 @@ struct ContentView: View {
     private func conversationIdentityContent(thread: ChatThreadSummary, layout: WorkspaceLayoutMetrics) -> some View {
         VStack(alignment: .leading, spacing: 10) {
             Text(thread.title)
-                .font(.system(size: 28, weight: .bold, design: .rounded))
+                .font(.system(size: ClawNestLayout.Typography.threadTitle, weight: .semibold))
                 .foregroundStyle(.white)
 
             Text(thread.description)
@@ -483,7 +470,7 @@ struct ContentView: View {
                         selectedSection = .claws
                     }
                     .buttonStyle(.borderedProminent)
-                    .tint(currentClaw.primaryColor)
+                    .tint(selectionTint)
                 }
             }
         }
@@ -575,14 +562,14 @@ struct ContentView: View {
             selectedSection = .claws
         }
         .buttonStyle(.borderedProminent)
-        .tint(currentClaw.primaryColor)
+        .tint(selectionTint)
     }
 
     private func placeholderConversationSurface(for thread: ChatThreadSummary, layout: WorkspaceLayoutMetrics) -> some View {
         card {
             VStack(alignment: .leading, spacing: 16) {
                 Text(t("This conversation page is reserved.", "这个会话页已预留。"))
-                    .font(.system(size: 24, weight: .bold, design: .rounded))
+                    .font(.system(size: ClawNestLayout.Typography.cardTitle, weight: .semibold))
                     .foregroundStyle(.white)
 
                 Text(t("`\(thread.clawName)` with agent `\(thread.agentName)` is represented in the new layout, but real remote chat sync is not wired yet. The page stays empty on purpose instead of inventing fake controls.", "`\(thread.clawName)` 和 `\(thread.agentName)` 已经出现在新布局里，但真实的远程聊天同步还没接上，所以这里会故意保持为空。"))
@@ -600,7 +587,7 @@ struct ContentView: View {
                         selectedSection = .claws
                     }
                     .buttonStyle(.borderedProminent)
-                    .tint(thread.primaryColor)
+                    .tint(selectionTint)
                 }
             }
         }
@@ -651,24 +638,24 @@ struct ContentView: View {
         VStack(alignment: .leading, spacing: 18) {
             panelHeader(
                 title: t("Claw List", "Claw 列表"),
-                subtitle: t("Warm cards, strong hierarchy, instant distinction.", "卡片温暖、层次清晰、彼此一眼可分。")
+                subtitle: t("Fast scanning for the current Claw set.", "快速扫视当前 Claw 集合。")
             )
 
-            HStack(spacing: 10) {
+            HStack(spacing: ClawNestLayout.Spacing.small) {
                 smallStatCard(
                     title: t("Online", "在线"),
                     value: "\(claws.filter(\.isOnline).count)",
-                    tint: Color(red: 0.31, green: 0.86, blue: 0.54)
+                    tint: GatewayStatusLevel.healthy.tintColor
                 )
                 smallStatCard(
                     title: t("Total", "总数"),
                     value: "\(claws.count)",
-                    tint: Color(red: 0.98, green: 0.66, blue: 0.38)
+                    tint: selectionTint
                 )
                 smallStatCard(
                     title: t("Alerts", "提醒"),
                     value: "\(claws.compactMap(\.alertBadge).count)",
-                    tint: Color(red: 0.94, green: 0.48, blue: 0.38)
+                    tint: GatewayStatusLevel.offline.tintColor
                 )
             }
 
@@ -696,7 +683,7 @@ struct ContentView: View {
                         showClawDetails(currentClaw, section: .settings)
                     }
                     .buttonStyle(.borderedProminent)
-                    .tint(currentClaw.primaryColor)
+                    .tint(selectionTint)
                 }
             }
         }
@@ -769,7 +756,7 @@ struct ContentView: View {
                 cardQuickActionButton(
                     title: t("Stop", "停止"),
                     systemImage: "stop.fill",
-                    tint: Color(red: 0.92, green: 0.39, blue: 0.38),
+                    tint: GatewayStatusLevel.offline.tintColor,
                     disabled: true
                 ) { }
                 .help(t("Per-instance stop control is not implemented yet.", "按实例停止控制暂时还没有实现。"))
@@ -786,27 +773,14 @@ struct ContentView: View {
         .padding(16)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(
-            RoundedRectangle(cornerRadius: 26, style: .continuous)
-                .fill(selectedClaw.id == claw.id ? Color.white.opacity(0.09) : Color.white.opacity(0.04))
+            RoundedRectangle(cornerRadius: ClawNestLayout.Radius.xLarge, style: .continuous)
+                .fill(selectedClaw.id == claw.id ? selectionTint.opacity(0.14) : rowFillColor)
                 .overlay(
-                    RoundedRectangle(cornerRadius: 26, style: .continuous)
-                        .stroke(selectedClaw.id == claw.id ? claw.primaryColor.opacity(0.42) : Color.white.opacity(0.05), lineWidth: 1)
+                    RoundedRectangle(cornerRadius: ClawNestLayout.Radius.xLarge, style: .continuous)
+                        .stroke(selectedClaw.id == claw.id ? selectionTint.opacity(0.34) : Color.white.opacity(0.05), lineWidth: 1)
                 )
-                .overlay(alignment: .topLeading) {
-                    Capsule()
-                        .fill(
-                            LinearGradient(
-                                colors: [claw.primaryColor, claw.secondaryColor],
-                                startPoint: .leading,
-                                endPoint: .trailing
-                            )
-                        )
-                        .frame(width: 92, height: 6)
-                        .padding(.top, 14)
-                        .padding(.leading, 14)
-                }
         )
-        .contentShape(RoundedRectangle(cornerRadius: 26, style: .continuous))
+        .contentShape(RoundedRectangle(cornerRadius: ClawNestLayout.Radius.xLarge, style: .continuous))
         .onTapGesture {
             showClawDetails(claw, section: .overview)
         }
@@ -842,7 +816,7 @@ struct ContentView: View {
             VStack(alignment: .leading, spacing: 10) {
                 FlowLayout(spacing: 10, rowSpacing: 10) {
                     Text(selectedClaw.name)
-                        .font(.system(size: 30, weight: .bold, design: .rounded))
+                        .font(.system(size: ClawNestLayout.Typography.threadTitle, weight: .semibold))
                         .foregroundStyle(.white)
                     if selectedClaw.isCurrent {
                         labelPill(t("Current", "当前"), systemImage: "bolt.fill", tint: selectedClaw.primaryColor)
@@ -900,22 +874,20 @@ struct ContentView: View {
                             Text(section.title(in: currentLanguage))
                         }
                         .font(.subheadline.weight(.semibold))
-                        .foregroundStyle(selectedClawDetailSection == section ? Color.black : Color.white)
+                        .foregroundStyle(.white)
                         .padding(.horizontal, 14)
                         .padding(.vertical, 10)
                         .background(
-                            Capsule()
+                            RoundedRectangle(cornerRadius: ClawNestLayout.Radius.medium, style: .continuous)
                                 .fill(
                                     selectedClawDetailSection == section
-                                        ? AnyShapeStyle(
-                                            LinearGradient(
-                                                colors: [selectedClaw.primaryColor, selectedClaw.secondaryColor],
-                                                startPoint: .leading,
-                                                endPoint: .trailing
-                                            )
-                                        )
-                                        : AnyShapeStyle(Color.white.opacity(0.05))
+                                        ? AnyShapeStyle(selectionTint.opacity(0.24))
+                                        : AnyShapeStyle(Color.white.opacity(0.03))
                                 )
+                        )
+                        .overlay(
+                            RoundedRectangle(cornerRadius: ClawNestLayout.Radius.medium, style: .continuous)
+                                .stroke(selectedClawDetailSection == section ? selectionTint.opacity(0.34) : Color.white.opacity(0.04), lineWidth: 1)
                         )
                     }
                     .buttonStyle(.plain)
@@ -1155,14 +1127,14 @@ struct ContentView: View {
             showClawDetails(currentClaw, section: .settings)
         }
         .buttonStyle(.borderedProminent)
-        .tint(currentClaw.primaryColor)
+        .tint(selectionTint)
     }
 
     private func remoteClawOverviewCard(layout: WorkspaceLayoutMetrics) -> some View {
         card {
             VStack(alignment: .leading, spacing: 16) {
                 Text(t("This Claw has a place, but not a full live link yet.", "这个 Claw 已经有位置，但还没有完整的实时连接。"))
-                    .font(.system(size: 24, weight: .bold, design: .rounded))
+                    .font(.system(size: ClawNestLayout.Typography.cardTitle, weight: .semibold))
                     .foregroundStyle(.white)
 
                 Text(t("You can already distinguish it, enter its detail home, and see its agents and reserved ports. Full remote lifecycle and telemetry support are still a placeholder.", "你已经可以区分它、进入它的主页，并查看它的 agents 和保留端口。完整的远程生命周期与遥测支持仍然是占位功能。"))
@@ -1307,12 +1279,16 @@ struct ContentView: View {
                 .font(.caption.weight(.semibold))
                 .foregroundStyle(.white.opacity(0.56))
             Text(value)
-                .font(.system(size: 18, weight: .bold, design: .rounded))
+                .font(.system(size: ClawNestLayout.Typography.statValue, weight: .semibold))
                 .foregroundStyle(.white)
         }
         .padding(12)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(tint.opacity(0.15), in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .background(tint.opacity(0.10), in: RoundedRectangle(cornerRadius: ClawNestLayout.Radius.medium, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: ClawNestLayout.Radius.medium, style: .continuous)
+                .stroke(tint.opacity(0.12), lineWidth: 1)
+        )
     }
 
     private func clawMetaPill(title: String, value: String) -> some View {
@@ -1327,7 +1303,11 @@ struct ContentView: View {
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 10)
-        .background(Color.white.opacity(0.05), in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .background(rowFillColor, in: RoundedRectangle(cornerRadius: ClawNestLayout.Radius.medium, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: ClawNestLayout.Radius.medium, style: .continuous)
+                .stroke(Color.white.opacity(0.04), lineWidth: 1)
+        )
     }
 
     private func cardQuickActionButton(
@@ -1342,27 +1322,31 @@ struct ContentView: View {
                 .font(.caption.weight(.semibold))
                 .foregroundStyle(disabled ? Color.white.opacity(0.42) : Color.white)
                 .frame(maxWidth: .infinity, minHeight: ClawNestLayout.Size.actionButtonMinHeight)
-                .padding(.vertical, 6)
+                .padding(.vertical, 4)
         }
         .buttonStyle(.plain)
         .background(
-            RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .fill(disabled ? Color.white.opacity(0.04) : tint.opacity(0.18))
+            RoundedRectangle(cornerRadius: ClawNestLayout.Radius.medium, style: .continuous)
+                .fill(disabled ? Color.white.opacity(0.03) : rowFillColor)
         )
         .overlay(
-            RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .stroke(disabled ? Color.white.opacity(0.04) : tint.opacity(0.28), lineWidth: 1)
+            RoundedRectangle(cornerRadius: ClawNestLayout.Radius.medium, style: .continuous)
+                .stroke(disabled ? Color.white.opacity(0.04) : tint.opacity(0.18), lineWidth: 1)
         )
         .disabled(disabled)
     }
 
     private func warningBadge(_ badge: ClawAlertBadge) -> some View {
         Label(badge.label, systemImage: badge.systemImage)
-            .font(.caption.weight(.bold))
+            .font(.caption.weight(.semibold))
             .foregroundStyle(.white)
             .padding(.horizontal, 10)
-            .padding(.vertical, 7)
-            .background(badge.tint.opacity(0.22), in: Capsule())
+            .padding(.vertical, 6)
+            .background(badge.tint.opacity(0.12), in: Capsule())
+            .overlay(
+                Capsule()
+                    .stroke(badge.tint.opacity(0.18), lineWidth: 1)
+            )
     }
 
     private func detailFact(title: String, value: String) -> some View {
@@ -1377,7 +1361,11 @@ struct ContentView: View {
         }
         .padding(16)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Color.white.opacity(0.04), in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+        .background(rowFillColor, in: RoundedRectangle(cornerRadius: ClawNestLayout.Radius.medium, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: ClawNestLayout.Radius.medium, style: .continuous)
+                .stroke(Color.white.opacity(0.04), lineWidth: 1)
+        )
     }
 
     private func detailFactsGrid(layout: WorkspaceLayoutMetrics, facts: [(title: String, value: String)]) -> some View {
@@ -1425,12 +1413,16 @@ struct ContentView: View {
                             } label: {
                                 Text(filter.title)
                                     .font(.subheadline.weight(.semibold))
-                                    .foregroundStyle(activeMomentFilterID == filter.id ? Color.black : Color.white)
+                                    .foregroundStyle(.white)
                                     .padding(.horizontal, 14)
                                     .padding(.vertical, 10)
                                     .background(
-                                        Capsule()
-                                            .fill(activeMomentFilterID == filter.id ? AnyShapeStyle(filter.color) : AnyShapeStyle(Color.white.opacity(0.05)))
+                                        RoundedRectangle(cornerRadius: ClawNestLayout.Radius.medium, style: .continuous)
+                                            .fill(activeMomentFilterID == filter.id ? AnyShapeStyle(selectionTint.opacity(0.24)) : AnyShapeStyle(Color.white.opacity(0.03)))
+                                    )
+                                    .overlay(
+                                        RoundedRectangle(cornerRadius: ClawNestLayout.Radius.medium, style: .continuous)
+                                            .stroke(activeMomentFilterID == filter.id ? selectionTint.opacity(0.34) : Color.white.opacity(0.04), lineWidth: 1)
                                     )
                             }
                             .buttonStyle(.plain)
@@ -1483,7 +1475,7 @@ struct ContentView: View {
                         }
 
                         Text(post.headline)
-                            .font(.system(size: 22, weight: .bold, design: .rounded))
+                            .font(.system(size: ClawNestLayout.Typography.cardTitle, weight: .semibold))
                             .foregroundStyle(.white)
 
                         Text(post.timestamp.formatted(date: .abbreviated, time: .shortened))
@@ -1505,7 +1497,7 @@ struct ContentView: View {
                         .foregroundStyle(.white.opacity(0.72))
                         .padding(12)
                         .frame(maxWidth: .infinity, alignment: .leading)
-                        .background(Color.white.opacity(0.04), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+                        .background(rowFillColor, in: RoundedRectangle(cornerRadius: ClawNestLayout.Radius.medium, style: .continuous))
                 }
             }
         }
@@ -1558,7 +1550,7 @@ struct ContentView: View {
                                 selectedSection = .claws
                             }
                             .buttonStyle(.borderedProminent)
-                            .tint(currentClaw.primaryColor)
+                            .tint(selectionTint)
 
                             Button(t("Open Moments", "打开 Moments")) {
                                 selectedSection = .moments
@@ -1586,7 +1578,7 @@ struct ContentView: View {
 
                     VStack(alignment: .leading, spacing: 4) {
                         Text(t("You", "你"))
-                            .font(.system(size: 28, weight: .bold, design: .rounded))
+                            .font(.system(size: ClawNestLayout.Typography.threadTitle, weight: .semibold))
                             .foregroundStyle(.white)
                         Text(t("Claw keeper", "Claw 管理者"))
                             .font(.headline)
@@ -1718,7 +1710,11 @@ struct ContentView: View {
         }
         .padding(14)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Color.white.opacity(0.04), in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .background(rowFillColor, in: RoundedRectangle(cornerRadius: ClawNestLayout.Radius.medium, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: ClawNestLayout.Radius.medium, style: .continuous)
+                .stroke(Color.white.opacity(0.04), lineWidth: 1)
+        )
     }
 
     private var compactStatusCard: some View {
@@ -1786,20 +1782,20 @@ struct ContentView: View {
     }
 
     private func workspaceHeader(eyebrow: String, title: String, subtitle: String) -> some View {
-        VStack(alignment: .leading, spacing: 10) {
+        VStack(alignment: .leading, spacing: ClawNestLayout.Spacing.small) {
             Text(eyebrow.uppercased())
-                .font(.caption.weight(.bold))
-                .foregroundStyle(.white.opacity(0.48))
-                .tracking(2)
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(.white.opacity(0.50))
+                .tracking(1.2)
             Text(title)
-                .font(.system(size: ClawNestLayout.Typography.workspaceTitle, weight: .bold, design: .rounded))
+                .font(.system(size: ClawNestLayout.Typography.workspaceTitle, weight: .semibold))
                 .foregroundStyle(.white)
             Text(subtitle)
-                .font(.body)
+                .font(.subheadline)
                 .foregroundStyle(.white.opacity(0.64))
                 .fixedSize(horizontal: false, vertical: true)
         }
-        .padding(ClawNestLayout.Spacing.xSmall / 2)
+        .padding(.vertical, ClawNestLayout.Spacing.xSmall / 2)
     }
 
     private func card<Content: View>(@ViewBuilder content: () -> Content) -> some View {
@@ -1811,10 +1807,10 @@ struct ContentView: View {
 
     private func cardBackground() -> some View {
         RoundedRectangle(cornerRadius: ClawNestLayout.Radius.xLarge, style: .continuous)
-            .fill(.black.opacity(0.22))
+            .fill(panelFillColor)
             .overlay(
                 RoundedRectangle(cornerRadius: ClawNestLayout.Radius.xLarge, style: .continuous)
-                    .stroke(Color.white.opacity(0.06), lineWidth: 1)
+                    .stroke(panelStrokeColor, lineWidth: 1)
             )
     }
 
@@ -1827,8 +1823,12 @@ struct ContentView: View {
         .font(.caption.weight(.semibold))
         .foregroundStyle(.white)
         .padding(.horizontal, 10)
-        .padding(.vertical, ClawNestLayout.Spacing.xSmall - 1)
-        .background(tint.opacity(0.20), in: Capsule())
+        .padding(.vertical, 6)
+        .background(tint.opacity(0.10), in: Capsule())
+        .overlay(
+            Capsule()
+                .stroke(tint.opacity(0.16), lineWidth: 1)
+        )
     }
 
     private func avatarBadge(text: String, primaryColor: Color, secondaryColor: Color, size: CGFloat) -> some View {
@@ -1846,7 +1846,6 @@ struct ContentView: View {
                 .foregroundStyle(.white)
         }
         .frame(width: size, height: size)
-        .shadow(color: primaryColor.opacity(0.36), radius: 16, y: 8)
     }
 
     private func statusDot(for color: Color) -> some View {
@@ -1906,7 +1905,7 @@ struct ContentView: View {
                     machineLabel: "\(deviceName) • Port \(instance.gatewayPort)",
                     statusLabel: t("Offline", "离线"),
                     statusDescription: t("Installed and remembered by ClawNest. Remote live status for this non-current Claw is still a placeholder.", "这个实例已经被 ClawNest 记住，但非当前 Claw 的实时状态还只是占位。"),
-                    statusColor: Color(red: 0.95, green: 0.72, blue: 0.38),
+                    statusColor: GatewayStatusLevel.degraded.tintColor,
                     healthLabel: t("Not connected", "未连接"),
                     installDirectoryPath: instance.installDirectoryPath,
                     launchAgentLabel: instance.launchAgentLabel,
@@ -1943,7 +1942,7 @@ struct ContentView: View {
             return ClawAlertBadge(
                 label: errorCount > 0 ? t("\(errorCount) issue", "\(errorCount) 个问题") : t("Offline", "离线"),
                 systemImage: "exclamationmark.octagon.fill",
-                tint: Color(red: 0.92, green: 0.39, blue: 0.38)
+                tint: GatewayStatusLevel.offline.tintColor
             )
         }
 
@@ -1951,7 +1950,7 @@ struct ContentView: View {
             return ClawAlertBadge(
                 label: warningCount > 0 ? t("\(warningCount) alerts", "\(warningCount) 个提醒") : t("Attention", "需关注"),
                 systemImage: "exclamationmark.triangle.fill",
-                tint: Color(red: 0.97, green: 0.69, blue: 0.33)
+                tint: GatewayStatusLevel.degraded.tintColor
             )
         }
 
@@ -1970,7 +1969,7 @@ struct ContentView: View {
                     detail: t("Checking this Claw every \(Int(model.configuration.probeIntervalSeconds)) seconds in observe-first mode.", "以观察优先模式每 \(Int(model.configuration.probeIntervalSeconds)) 秒检查一次这个 Claw。"),
                     statusLabel: t("Running", "运行中"),
                     systemImage: "waveform.path.ecg",
-                    tint: Color(red: 0.31, green: 0.86, blue: 0.54),
+                    tint: GatewayStatusLevel.healthy.tintColor,
                     timestamp: model.snapshot.lastCheck
                 ),
                 ClawTaskSummary(
@@ -1988,7 +1987,7 @@ struct ContentView: View {
                         : t("Observe-only mode is active. Recovery stays opt-in.", "当前是观察模式，恢复操作保持手动触发。"),
                     statusLabel: model.configuration.autoRestartEnabled ? t("Armed", "已启用") : t("Passive", "被动模式"),
                     systemImage: model.configuration.autoRestartEnabled ? "bolt.badge.clock.fill" : "shield.lefthalf.filled",
-                    tint: model.configuration.autoRestartEnabled ? Color(red: 0.96, green: 0.67, blue: 0.36) : Color(red: 0.38, green: 0.78, blue: 0.84),
+                    tint: model.configuration.autoRestartEnabled ? GatewayStatusLevel.degraded.tintColor : GatewayStatusLevel.recovering.tintColor,
                     timestamp: model.snapshot.lastCheck
                 )
             ]
@@ -2000,7 +1999,7 @@ struct ContentView: View {
                         detail: installStatusMessage,
                         statusLabel: model.isInstallingOpenClaw ? t("Running", "运行中") : t("Latest", "最近"),
                         systemImage: model.isInstallingOpenClaw ? "shippingbox.fill" : "tray.and.arrow.down.fill",
-                        tint: Color(red: 0.98, green: 0.66, blue: 0.38),
+                        tint: GatewayStatusLevel.recovering.tintColor,
                         timestamp: .now
                     )
                 )
@@ -2061,12 +2060,12 @@ struct ContentView: View {
 
     private var dashboardTaskTint: Color {
         if model.dashboardWebError != nil {
-            return Color(red: 0.92, green: 0.39, blue: 0.38)
+            return GatewayStatusLevel.offline.tintColor
         }
         if model.isDashboardLoading {
-            return Color(red: 0.34, green: 0.73, blue: 0.94)
+            return GatewayStatusLevel.recovering.tintColor
         }
-        return Color(red: 0.31, green: 0.86, blue: 0.54)
+        return GatewayStatusLevel.healthy.tintColor
     }
 
     private func currentClawAgents() -> [ClawAgentSummary] {
@@ -2334,10 +2333,10 @@ private struct ClawPalette {
     let secondary: Color
 
     static let defaults: [ClawPalette] = [
-        ClawPalette(primary: Color(red: 0.98, green: 0.66, blue: 0.38), secondary: Color(red: 0.91, green: 0.38, blue: 0.33)),
-        ClawPalette(primary: Color(red: 0.38, green: 0.78, blue: 0.84), secondary: Color(red: 0.16, green: 0.46, blue: 0.82)),
-        ClawPalette(primary: Color(red: 0.77, green: 0.53, blue: 0.96), secondary: Color(red: 0.42, green: 0.30, blue: 0.82)),
-        ClawPalette(primary: Color(red: 0.57, green: 0.89, blue: 0.46), secondary: Color(red: 0.18, green: 0.63, blue: 0.35))
+        ClawPalette(primary: Color(red: 0.43, green: 0.57, blue: 0.78), secondary: Color(red: 0.34, green: 0.46, blue: 0.67)),
+        ClawPalette(primary: Color(red: 0.42, green: 0.66, blue: 0.59), secondary: Color(red: 0.31, green: 0.52, blue: 0.46)),
+        ClawPalette(primary: Color(red: 0.66, green: 0.59, blue: 0.46), secondary: Color(red: 0.52, green: 0.45, blue: 0.34)),
+        ClawPalette(primary: Color(red: 0.57, green: 0.54, blue: 0.69), secondary: Color(red: 0.44, green: 0.42, blue: 0.56))
     ]
 }
 
@@ -2535,32 +2534,32 @@ private struct StatusHeroView: View {
                 }
             }
         }
-        .padding(ClawNestLayout.Spacing.xLarge + 2)
+        .padding(ClawNestLayout.Spacing.large)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(backgroundGradient, in: RoundedRectangle(cornerRadius: ClawNestLayout.Radius.xxLarge, style: .continuous))
+        .background(Color.white.opacity(0.035), in: RoundedRectangle(cornerRadius: ClawNestLayout.Radius.xxLarge, style: .continuous))
         .overlay(
             RoundedRectangle(cornerRadius: ClawNestLayout.Radius.xxLarge, style: .continuous)
-                .stroke(Color.white.opacity(0.08), lineWidth: 1)
+                .stroke(snapshot.level.tintColor.opacity(0.20), lineWidth: 1)
         )
     }
 
     private var statusIcon: some View {
         Image(systemName: snapshot.level.iconName)
-            .font(.system(size: ClawNestLayout.Typography.statusIcon, weight: .bold))
-            .foregroundStyle(.white)
+            .font(.system(size: ClawNestLayout.Typography.statusIcon, weight: .semibold))
+            .foregroundStyle(snapshot.level.tintColor)
             .frame(width: ClawNestLayout.Size.statusHeroIconBox, height: ClawNestLayout.Size.statusHeroIconBox)
-            .background(.white.opacity(0.12), in: RoundedRectangle(cornerRadius: ClawNestLayout.Radius.large, style: .continuous))
+            .background(snapshot.level.tintColor.opacity(0.15), in: RoundedRectangle(cornerRadius: ClawNestLayout.Radius.large, style: .continuous))
     }
 
     private var statusText: some View {
         VStack(alignment: .leading, spacing: 10) {
             Text(snapshot.level.label(in: language).uppercased())
-                .font(.caption.weight(.bold))
-                .foregroundStyle(.white.opacity(0.72))
-                .tracking(2)
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(snapshot.level.tintColor)
+                .tracking(1.2)
 
             Text(snapshot.headline)
-                .font(.system(size: ClawNestLayout.Typography.heroTitle, weight: .bold, design: .rounded))
+                .font(.system(size: ClawNestLayout.Typography.heroTitle, weight: .semibold))
                 .foregroundStyle(.white)
 
             Text(snapshot.detail)
@@ -2581,36 +2580,11 @@ private struct StatusHeroView: View {
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 10)
-        .background(.white.opacity(0.12), in: RoundedRectangle(cornerRadius: ClawNestLayout.Radius.small, style: .continuous))
-    }
-
-    private var backgroundGradient: LinearGradient {
-        switch snapshot.level {
-        case .healthy:
-            return LinearGradient(
-                colors: [Color(red: 0.18, green: 0.64, blue: 0.43), Color(red: 0.12, green: 0.36, blue: 0.24)],
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )
-        case .recovering:
-            return LinearGradient(
-                colors: [Color(red: 0.16, green: 0.57, blue: 0.84), Color(red: 0.12, green: 0.28, blue: 0.54)],
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )
-        case .degraded:
-            return LinearGradient(
-                colors: [Color(red: 0.92, green: 0.58, blue: 0.24), Color(red: 0.56, green: 0.30, blue: 0.14)],
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )
-        case .offline, .missingCLI:
-            return LinearGradient(
-                colors: [Color(red: 0.74, green: 0.29, blue: 0.24), Color(red: 0.35, green: 0.12, blue: 0.16)],
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )
-        }
+        .background(Color.white.opacity(0.04), in: RoundedRectangle(cornerRadius: ClawNestLayout.Radius.small, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: ClawNestLayout.Radius.small, style: .continuous)
+                .stroke(Color.white.opacity(0.05), lineWidth: 1)
+        )
     }
 }
 
@@ -2622,15 +2596,15 @@ private struct ControlPanelView: View {
         VStack(alignment: .leading, spacing: 18) {
             panelHeader(title: localized("Claw Actions", "Claw 动作", language: language), subtitle: localized("The current runtime stays recoverable even when the dashboard surface is having a bad day.", "即使 dashboard 状态不好，当前 runtime 仍然可以在这里恢复。", language: language))
 
-            ForEach(model.snapshot.suggestedActions) { action in
+            ForEach(Array(model.snapshot.suggestedActions.enumerated()), id: \.element.id) { index, action in
                 Button {
                     model.perform(action)
                 } label: {
                     HStack(spacing: 12) {
                         Image(systemName: action.systemImage)
-                            .font(.title3)
+                            .font(.system(size: 16, weight: .semibold))
                             .frame(width: 28)
-                            .foregroundStyle(.white)
+                            .foregroundStyle(index == 0 ? Color.white : model.snapshot.level.tintColor)
 
                         VStack(alignment: .leading, spacing: 4) {
                             Text(action.title(in: language))
@@ -2644,7 +2618,11 @@ private struct ControlPanelView: View {
                         Spacer()
                     }
                     .padding(14)
-                    .background(Color.white.opacity(0.05), in: RoundedRectangle(cornerRadius: ClawNestLayout.Radius.medium, style: .continuous))
+                    .background((index == 0 ? model.snapshot.level.tintColor.opacity(0.16) : Color.white.opacity(0.03)), in: RoundedRectangle(cornerRadius: ClawNestLayout.Radius.medium, style: .continuous))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: ClawNestLayout.Radius.medium, style: .continuous)
+                            .stroke(index == 0 ? model.snapshot.level.tintColor.opacity(0.24) : Color.white.opacity(0.05), lineWidth: 1)
+                    )
                 }
                 .buttonStyle(.plain)
                 .disabled(model.isBusy && action != .openDashboard && action != .revealLogs && action != .openInstallGuide)
@@ -2653,10 +2631,10 @@ private struct ControlPanelView: View {
         .padding(ClawNestLayout.Spacing.large + 2)
         .background(
             RoundedRectangle(cornerRadius: ClawNestLayout.Radius.xLarge, style: .continuous)
-                .fill(.black.opacity(0.22))
+                .fill(Color.white.opacity(0.035))
                 .overlay(
                     RoundedRectangle(cornerRadius: ClawNestLayout.Radius.xLarge, style: .continuous)
-                        .stroke(Color.white.opacity(0.06), lineWidth: 1)
+                        .stroke(Color.white.opacity(0.07), lineWidth: 1)
                 )
         )
     }
@@ -2684,7 +2662,11 @@ private struct MetricsPanelView: View {
                             .frame(maxWidth: .infinity, alignment: .leading)
                     }
                     .padding(16)
-                    .background(Color.white.opacity(0.05), in: RoundedRectangle(cornerRadius: ClawNestLayout.Radius.medium, style: .continuous))
+                    .background(Color.white.opacity(0.03), in: RoundedRectangle(cornerRadius: ClawNestLayout.Radius.medium, style: .continuous))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: ClawNestLayout.Radius.medium, style: .continuous)
+                            .stroke(Color.white.opacity(0.04), lineWidth: 1)
+                    )
                 }
             }
         }
@@ -2692,10 +2674,10 @@ private struct MetricsPanelView: View {
         .padding(ClawNestLayout.Spacing.large + 2)
         .background(
             RoundedRectangle(cornerRadius: ClawNestLayout.Radius.xLarge, style: .continuous)
-                .fill(.black.opacity(0.22))
+                .fill(Color.white.opacity(0.035))
                 .overlay(
                     RoundedRectangle(cornerRadius: ClawNestLayout.Radius.xLarge, style: .continuous)
-                        .stroke(Color.white.opacity(0.06), lineWidth: 1)
+                        .stroke(Color.white.opacity(0.07), lineWidth: 1)
                 )
         )
     }
@@ -2739,10 +2721,10 @@ private struct DashboardPanelView: View {
         .padding(ClawNestLayout.Spacing.large + 2)
         .background(
             RoundedRectangle(cornerRadius: ClawNestLayout.Radius.xLarge, style: .continuous)
-                .fill(.black.opacity(0.22))
+                .fill(Color.white.opacity(0.035))
                 .overlay(
                     RoundedRectangle(cornerRadius: ClawNestLayout.Radius.xLarge, style: .continuous)
-                        .stroke(Color.white.opacity(0.06), lineWidth: 1)
+                        .stroke(Color.white.opacity(0.07), lineWidth: 1)
                 )
         )
     }
@@ -2754,7 +2736,7 @@ private struct DashboardPanelView: View {
     @ViewBuilder
     private var overlayView: some View {
         RoundedRectangle(cornerRadius: ClawNestLayout.Radius.large, style: .continuous)
-            .fill(.black.opacity(0.56))
+            .fill(Color.black.opacity(0.46))
             .overlay {
                 VStack(spacing: 14) {
                     Image(systemName: overlayIcon)
@@ -2762,7 +2744,7 @@ private struct DashboardPanelView: View {
                         .foregroundStyle(.white)
 
                     Text(overlayTitle)
-                        .font(.title3.bold())
+                        .font(.headline)
                         .foregroundStyle(.white)
 
                     Text(overlayMessage)
@@ -2869,10 +2851,10 @@ private struct ActivityFeedView: View {
         .padding(ClawNestLayout.Spacing.large + 2)
         .background(
             RoundedRectangle(cornerRadius: ClawNestLayout.Radius.xLarge, style: .continuous)
-                .fill(.black.opacity(0.22))
+                .fill(Color.white.opacity(0.035))
                 .overlay(
                     RoundedRectangle(cornerRadius: ClawNestLayout.Radius.xLarge, style: .continuous)
-                        .stroke(Color.white.opacity(0.06), lineWidth: 1)
+                        .stroke(Color.white.opacity(0.07), lineWidth: 1)
                 )
         )
     }
@@ -2880,13 +2862,13 @@ private struct ActivityFeedView: View {
     private func backgroundColor(for level: DiagnosticLevel) -> Color {
         switch level {
         case .success:
-            return Color(red: 0.12, green: 0.25, blue: 0.18).opacity(0.88)
+            return Color(red: 0.19, green: 0.33, blue: 0.27).opacity(0.38)
         case .info:
-            return Color.white.opacity(0.04)
+            return Color.white.opacity(0.03)
         case .warning:
-            return Color(red: 0.27, green: 0.19, blue: 0.08).opacity(0.92)
+            return Color(red: 0.37, green: 0.29, blue: 0.14).opacity(0.32)
         case .error:
-            return Color(red: 0.29, green: 0.11, blue: 0.13).opacity(0.92)
+            return Color(red: 0.39, green: 0.20, blue: 0.22).opacity(0.34)
         }
     }
 }
@@ -2917,16 +2899,16 @@ private struct LatestLogView: View {
                 .frame(minHeight: logMinHeight)
             }
             .padding(ClawNestLayout.Spacing.large - 2)
-            .background(Color.black.opacity(0.84), in: RoundedRectangle(cornerRadius: ClawNestLayout.Radius.medium + 2, style: .continuous))
+            .background(Color.black.opacity(0.78), in: RoundedRectangle(cornerRadius: ClawNestLayout.Radius.medium, style: .continuous))
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(ClawNestLayout.Spacing.large + 2)
         .background(
             RoundedRectangle(cornerRadius: ClawNestLayout.Radius.xLarge, style: .continuous)
-                .fill(.black.opacity(0.22))
+                .fill(Color.white.opacity(0.035))
                 .overlay(
                     RoundedRectangle(cornerRadius: ClawNestLayout.Radius.xLarge, style: .continuous)
-                        .stroke(Color.white.opacity(0.06), lineWidth: 1)
+                        .stroke(Color.white.opacity(0.07), lineWidth: 1)
                 )
         )
     }
@@ -3022,10 +3004,10 @@ private struct OpenClawInstallView: View {
         .padding(ClawNestLayout.Spacing.large + 2)
         .background(
             RoundedRectangle(cornerRadius: ClawNestLayout.Radius.xLarge, style: .continuous)
-                .fill(.black.opacity(0.22))
+                .fill(Color.white.opacity(0.035))
                 .overlay(
                     RoundedRectangle(cornerRadius: ClawNestLayout.Radius.xLarge, style: .continuous)
-                        .stroke(Color.white.opacity(0.06), lineWidth: 1)
+                        .stroke(Color.white.opacity(0.07), lineWidth: 1)
                 )
         )
     }
@@ -3068,7 +3050,7 @@ private struct OpenClawInstallView: View {
             model.installOpenClaw()
         }
         .buttonStyle(.borderedProminent)
-        .tint(Color(red: 0.96, green: 0.63, blue: 0.39))
+        .tint(Color(red: 0.43, green: 0.57, blue: 0.78))
         .disabled(model.isInstallingOpenClaw || !model.installValidation.isValid)
     }
 
@@ -3080,9 +3062,13 @@ private struct OpenClawInstallView: View {
             .frame(maxWidth: .infinity, alignment: .leading)
             .background(
                 (model.installValidation.isValid
-                    ? Color(red: 0.12, green: 0.34, blue: 0.21)
-                    : Color(red: 0.35, green: 0.13, blue: 0.15)),
+                    ? Color(red: 0.21, green: 0.33, blue: 0.27).opacity(0.60)
+                    : Color(red: 0.39, green: 0.20, blue: 0.22).opacity(0.60)),
                 in: RoundedRectangle(cornerRadius: ClawNestLayout.Radius.medium - 2, style: .continuous)
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: ClawNestLayout.Radius.medium - 2, style: .continuous)
+                    .stroke(model.installValidation.isValid ? Color(red: 0.32, green: 0.51, blue: 0.42).opacity(0.60) : Color(red: 0.58, green: 0.33, blue: 0.35).opacity(0.65), lineWidth: 1)
             )
     }
 
@@ -3108,7 +3094,11 @@ private struct OpenClawInstallView: View {
         }
         .padding(16)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Color.white.opacity(0.05), in: RoundedRectangle(cornerRadius: ClawNestLayout.Radius.medium - 2, style: .continuous))
+        .background(Color.white.opacity(0.03), in: RoundedRectangle(cornerRadius: ClawNestLayout.Radius.medium - 2, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: ClawNestLayout.Radius.medium - 2, style: .continuous)
+                .stroke(Color.white.opacity(0.04), lineWidth: 1)
+        )
     }
 
     private var knownInstances: some View {
@@ -3138,7 +3128,11 @@ private struct OpenClawInstallView: View {
                     Spacer()
                 }
                 .padding(14)
-                .background(Color.white.opacity(0.04), in: RoundedRectangle(cornerRadius: ClawNestLayout.Radius.medium - 2, style: .continuous))
+                .background(Color.white.opacity(0.03), in: RoundedRectangle(cornerRadius: ClawNestLayout.Radius.medium - 2, style: .continuous))
+                .overlay(
+                    RoundedRectangle(cornerRadius: ClawNestLayout.Radius.medium - 2, style: .continuous)
+                        .stroke(Color.white.opacity(0.04), lineWidth: 1)
+                )
             }
         }
     }
@@ -3206,7 +3200,7 @@ private struct ConfigurationEditorView: View {
                     onSave(draft)
                 }
                 .buttonStyle(.borderedProminent)
-                .tint(Color(red: 0.98, green: 0.66, blue: 0.38))
+                .tint(Color(red: 0.43, green: 0.57, blue: 0.78))
                 .disabled(isBusy || draft == configuration)
 
                 Button(localized("Reset to Defaults", "恢复默认", language: language)) {
@@ -3220,10 +3214,10 @@ private struct ConfigurationEditorView: View {
         .padding(ClawNestLayout.Spacing.large + 2)
         .background(
             RoundedRectangle(cornerRadius: ClawNestLayout.Radius.xLarge, style: .continuous)
-                .fill(.black.opacity(0.22))
+                .fill(Color.white.opacity(0.035))
                 .overlay(
                     RoundedRectangle(cornerRadius: ClawNestLayout.Radius.xLarge, style: .continuous)
-                        .stroke(Color.white.opacity(0.06), lineWidth: 1)
+                        .stroke(Color.white.opacity(0.07), lineWidth: 1)
                 )
         )
         .onChange(of: configuration) { _, newValue in
@@ -3279,7 +3273,7 @@ private struct ConfigurationEditorView: View {
 private func panelHeader(title: String, subtitle: String) -> some View {
     VStack(alignment: .leading, spacing: 6) {
         Text(title)
-            .font(.system(size: ClawNestLayout.Typography.sectionTitle, weight: .bold, design: .rounded))
+            .font(.system(size: ClawNestLayout.Typography.sectionTitle, weight: .semibold))
             .foregroundStyle(.white)
         Text(subtitle)
             .font(.subheadline)
@@ -3288,17 +3282,17 @@ private func panelHeader(title: String, subtitle: String) -> some View {
     }
 }
 
-private extension GatewayStatusLevel {
+extension GatewayStatusLevel {
     var tintColor: Color {
         switch self {
         case .healthy:
-            return Color(red: 0.29, green: 0.88, blue: 0.53)
+            return Color(red: 0.43, green: 0.66, blue: 0.58)
         case .recovering:
-            return Color(red: 0.34, green: 0.73, blue: 0.94)
+            return Color(red: 0.45, green: 0.60, blue: 0.78)
         case .degraded:
-            return Color(red: 0.95, green: 0.72, blue: 0.38)
+            return Color(red: 0.72, green: 0.61, blue: 0.42)
         case .offline, .missingCLI:
-            return Color(red: 0.92, green: 0.39, blue: 0.38)
+            return Color(red: 0.71, green: 0.43, blue: 0.45)
         }
     }
 }

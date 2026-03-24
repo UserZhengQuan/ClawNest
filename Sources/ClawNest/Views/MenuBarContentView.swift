@@ -4,11 +4,11 @@ struct MenuBarContentView: View {
     @ObservedObject var model: AppModel
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 14) {
+        VStack(alignment: .leading, spacing: ClawNestLayout.Spacing.medium) {
             HStack(alignment: .center, spacing: 12) {
                 Image(systemName: model.snapshot.level.iconName)
                     .font(.system(size: 22, weight: .semibold))
-                    .foregroundStyle(statusColor)
+                    .foregroundStyle(model.snapshot.level.tintColor)
 
                 VStack(alignment: .leading, spacing: 2) {
                     Text(model.snapshot.level.label(in: model.language))
@@ -50,18 +50,5 @@ struct MenuBarContentView: View {
         }
         .buttonStyle(.bordered)
         .disabled(model.isBusy && action != .openDashboard && action != .revealLogs)
-    }
-
-    private var statusColor: Color {
-        switch model.snapshot.level {
-        case .healthy:
-            return Color(red: 0.15, green: 0.63, blue: 0.39)
-        case .recovering:
-            return Color(red: 0.14, green: 0.54, blue: 0.78)
-        case .degraded:
-            return Color(red: 0.90, green: 0.57, blue: 0.14)
-        case .offline, .missingCLI:
-            return Color(red: 0.76, green: 0.24, blue: 0.19)
-        }
     }
 }
