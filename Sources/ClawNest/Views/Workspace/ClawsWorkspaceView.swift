@@ -11,6 +11,7 @@ struct ClawsWorkspaceView: View {
     let selectedClawMomentPosts: [MomentFeedItem]
     let selectedClawTasks: [ClawTaskSummary]
     let onSelectClaw: (ClawSummary, ClawDetailSection) -> Void
+    let onCreateClaw: () -> Void
     let onOpenChat: (ClawSummary) -> Void
     let onStartClaw: (ClawSummary) -> Void
 
@@ -94,13 +95,13 @@ struct ClawsWorkspaceView: View {
                     Text(t("Bring in another Claw", "添加另一个 Claw"))
                         .font(.headline)
                         .foregroundStyle(.white)
-                    Text(t("The installer is still the real one. This shortcut simply drops you into the Settings section where expansion lives.", "安装器仍然是可用的真实功能，这个入口只是带你跳到 Settings 里的扩展区域。"))
+                    Text(t("Open the live installer flow with validation and status feedback instead of leaving the action silent.", "直接打开当前可用的安装流程，并显示校验与状态反馈，不再让点击没有结果。"))
                         .font(.footnote)
                         .foregroundStyle(.white.opacity(0.62))
                         .fixedSize(horizontal: false, vertical: true)
 
                     Button(t("New Claw", "新建 Claw")) {
-                        onSelectClaw(currentClaw, .settings)
+                        onCreateClaw()
                     }
                     .buttonStyle(.borderedProminent)
                     .tint(currentClaw.primaryColor)
@@ -519,7 +520,7 @@ struct ClawsWorkspaceView: View {
                     }
                 }
 
-                OpenClawInstallView(model: model, language: language, layout: layout)
+                newClawSettingsHandoffCard
             } else {
                 PlaceholderCardView(
                     title: t("Remote Claw settings are reserved.", "远程 Claw 设置已预留。"),
@@ -544,6 +545,45 @@ struct ClawsWorkspaceView: View {
                 }
             }
         }
+    }
+
+    private var newClawSettingsHandoffCard: some View {
+        ShellCard {
+            Group {
+                if layout.formStacksVertically {
+                    VStack(alignment: .leading, spacing: 16) {
+                        newClawSettingsPrompt
+                        openNewClawButton
+                    }
+                } else {
+                    HStack(alignment: .top, spacing: 16) {
+                        newClawSettingsPrompt
+                        Spacer()
+                        openNewClawButton
+                    }
+                }
+            }
+        }
+    }
+
+    private var newClawSettingsPrompt: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text(t("New Claw runs in a separate modal.", "新建 Claw 现在在独立弹窗中完成。"))
+                .font(.headline)
+                .foregroundStyle(.white)
+            Text(t("Settings stays focused on the active runtime. Open the dedicated modal for CLI checks, installation, errors, and setup guidance.", "设置页继续只负责当前 runtime。需要 CLI 检测、安装、错误提示和创建引导时，请打开独立弹窗。"))
+                .font(.footnote)
+                .foregroundStyle(.white.opacity(0.62))
+                .fixedSize(horizontal: false, vertical: true)
+        }
+    }
+
+    private var openNewClawButton: some View {
+        Button(t("Open New Claw", "打开新建 Claw")) {
+            onCreateClaw()
+        }
+        .buttonStyle(.borderedProminent)
+        .tint(currentClaw.primaryColor)
     }
 
     private var remoteSettingsPrompt: some View {
