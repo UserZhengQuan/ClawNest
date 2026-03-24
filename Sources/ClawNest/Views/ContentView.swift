@@ -9,6 +9,7 @@ struct ContentView: View {
     @State private var selectedClawID: String?
     @State private var selectedClawDetailSection: ClawDetailSection = .overview
     @State private var selectedMomentFilterID = WorkspaceMomentFilter.allID
+    @State private var isPresentingNewClawSheet = false
 
     var body: some View {
         GeometryReader { proxy in
@@ -40,6 +41,13 @@ struct ContentView: View {
         }
         .preferredColorScheme(.dark)
         .frame(minWidth: ClawNestLayout.Window.minimumWidth, minHeight: ClawNestLayout.Window.minimumHeight)
+        .sheet(isPresented: $isPresentingNewClawSheet, onDismiss: refreshAfterNewClawFlow) {
+            NewClawSheetView(
+                model: model,
+                language: currentLanguage,
+                onClose: closeNewClawFlow
+            )
+        }
     }
 
     private var currentLanguage: AppLanguage {
@@ -63,6 +71,7 @@ struct ContentView: View {
                     selectedConversation: selectedConversation,
                     conversations: conversations,
                     onSelectConversation: { selectedConversationID = $0 },
+                    onCreateClaw: openNewClawFlow,
                     onOpenClaws: { selectedSection = .claws },
                     onOpenMoments: { selectedSection = .moments }
                 )
@@ -78,6 +87,7 @@ struct ContentView: View {
                     selectedClawMomentPosts: selectedClawMomentPosts,
                     selectedClawTasks: selectedClawTasks,
                     onSelectClaw: showClawDetails(_:section:),
+                    onCreateClaw: openNewClawFlow,
                     onOpenChat: openChat(for:),
                     onStartClaw: startClaw(_:)
                 )
@@ -543,6 +553,21 @@ struct ContentView: View {
             selectedConversationID = "live-\(claw.id)"
         } else {
             selectedConversationID = "placeholder-\(claw.id)"
+        }
+    }
+
+    private func openNewClawFlow() {
+        isPresentingNewClawSheet = true
+    }
+
+    private func closeNewClawFlow() {
+        isPresentingNewClawSheet = false
+    }
+
+    private func refreshAfterNewClawFlow() {
+        model.refreshNow()
+        Task {
+            await model.refreshInstallSnapshot()
         }
     }
 

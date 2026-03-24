@@ -8,6 +8,7 @@ struct ChatWorkspaceView: View {
     let selectedConversation: ChatThreadSummary
     let conversations: [ChatThreadSummary]
     let onSelectConversation: (String) -> Void
+    let onCreateClaw: () -> Void
     let onOpenClaws: () -> Void
     let onOpenMoments: () -> Void
 
@@ -287,8 +288,6 @@ struct ChatWorkspaceView: View {
 
     private var installerConversationSurface: some View {
         VStack(spacing: 20) {
-            OpenClawInstallView(model: model, language: language, layout: layout)
-
             ShellCard {
                 Group {
                     if layout.formStacksVertically {
@@ -310,10 +309,10 @@ struct ChatWorkspaceView: View {
 
     private var installerHandoffBody: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text(t("Installer handoff", "安装引导"))
+            Text(t("New Claw now opens in a modal", "新建 Claw 现在通过弹窗打开"))
                 .font(.headline)
                 .foregroundStyle(.white)
-            Text(t("The install flow is fully usable already. Multi-step onboarding and prettier setup coaching will land later, so this thread simply points you at the working surface.", "安装流程已经可用，多步骤引导和更完整的新手提示后面再补，现在这个线程只负责带你到可用界面。"))
+            Text(t("The actual install flow, environment checks, and failure feedback no longer occupy the main workspace. Open the dedicated modal to continue there.", "真正的安装流程、环境检测和失败反馈不再占用主工作区。打开独立弹窗后，再在里面继续。"))
                 .font(.footnote)
                 .foregroundStyle(.white.opacity(0.62))
                 .fixedSize(horizontal: false, vertical: true)
@@ -321,8 +320,8 @@ struct ChatWorkspaceView: View {
     }
 
     private var installerHandoffButton: some View {
-        Button(t("Open Claws", "打开 Claws")) {
-            onOpenClaws()
+        Button(t("Open New Claw", "打开新建 Claw")) {
+            onCreateClaw()
         }
         .buttonStyle(.borderedProminent)
         .tint(currentClaw.primaryColor)

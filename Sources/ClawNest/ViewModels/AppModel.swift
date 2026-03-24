@@ -10,6 +10,7 @@ final class AppModel: ObservableObject {
     @Published var installDraft: OpenClawInstallDraft
     @Published var installValidation: OpenClawInstallValidation
     @Published var knownOpenClawInstances: [InstalledOpenClawInstance] = []
+    @Published var installProgress: OpenClawInstallProgress
     @Published var installStatusMessage: String?
     @Published var isInstallingOpenClaw = false
     @Published var dashboardWebError: String?
@@ -38,6 +39,7 @@ final class AppModel: ObservableObject {
         self.language = language
         self.installDraft = installDraft
         self.installValidation = .idle
+        self.installProgress = .idle
         self.snapshot = .placeholder(configuration: configuration)
         self.supervisor = GatewaySupervisor(
             configuration: configuration,
