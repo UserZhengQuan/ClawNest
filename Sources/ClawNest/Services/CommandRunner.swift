@@ -1,5 +1,15 @@
 import Foundation
 
+enum CommandOutputStream: Sendable {
+    case stdout
+    case stderr
+}
+
+struct CommandOutputChunk: Sendable {
+    let stream: CommandOutputStream
+    let text: String
+}
+
 struct CommandResult: Sendable {
     let command: String
     let arguments: [String]
@@ -21,17 +31,53 @@ struct CommandResult: Sendable {
 }
 
 protocol CommandRunning: Sendable {
-    func run(command: String, arguments: [String], environment: [String: String]) async -> CommandResult
+    func run(
+        command: String,
+        arguments: [String],
+        environment: [String: String],
+        outputHandler: (@Sendable (CommandOutputChunk) -> Void)?
+    ) async -> CommandResult
 }
 
 extension CommandRunning {
+    func run(
+        command: String,
+        arguments: [String],
+        outputHandler: (@Sendable (CommandOutputChunk) -> Void)? = nil
+    ) async -> CommandResult {
+        await run(
+            command: command,
+            arguments: arguments,
+            environment: [:],
+            outputHandler: outputHandler
+        )
+    }
+
+    func run(
+        command: String,
+        arguments: [String],
+        environment: [String: String]
+    ) async -> CommandResult {
+        await run(
+            command: command,
+            arguments: arguments,
+            environment: environment,
+            outputHandler: nil
+        )
+    }
+
     func run(command: String, arguments: [String]) async -> CommandResult {
-        await run(command: command, arguments: arguments, environment: [:])
+        await run(command: command, arguments: arguments, environment: [:], outputHandler: nil)
     }
 }
 
 final class ProcessCommandRunner: CommandRunning, @unchecked Sendable {
-    func run(command: String, arguments: [String], environment: [String: String] = [:]) async -> CommandResult {
+    func run(
+        command: String,
+        arguments: [String],
+        environment: [String: String] = [:],
+        outputHandler: (@Sendable (CommandOutputChunk) -> Void)? = nil
+    ) async -> CommandResult {
         await withCheckedContinuation { continuation in
             let process = Process()
             let stdoutPipe = Pipe()
@@ -46,6 +92,7 @@ final class ProcessCommandRunner: CommandRunning, @unchecked Sendable {
                     return
                 }
                 stdoutAccumulator.append(chunk)
+                Self.forward(chunk: chunk, stream: .stdout, outputHandler: outputHandler)
             }
 
             stderrPipe.fileHandleForReading.readabilityHandler = { handle in
@@ -55,6 +102,7 @@ final class ProcessCommandRunner: CommandRunning, @unchecked Sendable {
                     return
                 }
                 stderrAccumulator.append(chunk)
+                Self.forward(chunk: chunk, stream: .stderr, outputHandler: outputHandler)
             }
 
             process.executableURL = URL(fileURLWithPath: "/usr/bin/env")
@@ -72,8 +120,13 @@ final class ProcessCommandRunner: CommandRunning, @unchecked Sendable {
                 stdoutPipe.fileHandleForReading.readabilityHandler = nil
                 stderrPipe.fileHandleForReading.readabilityHandler = nil
 
-                stdoutAccumulator.append(stdoutPipe.fileHandleForReading.readDataToEndOfFile())
-                stderrAccumulator.append(stderrPipe.fileHandleForReading.readDataToEndOfFile())
+                let remainingStdout = stdoutPipe.fileHandleForReading.readDataToEndOfFile()
+                let remainingStderr = stderrPipe.fileHandleForReading.readDataToEndOfFile()
+
+                stdoutAccumulator.append(remainingStdout)
+                stderrAccumulator.append(remainingStderr)
+                Self.forward(chunk: remainingStdout, stream: .stdout, outputHandler: outputHandler)
+                Self.forward(chunk: remainingStderr, stream: .stderr, outputHandler: outputHandler)
 
                 continuation.resume(returning: CommandResult(
                     command: command,
@@ -101,6 +154,17 @@ final class ProcessCommandRunner: CommandRunning, @unchecked Sendable {
                 ))
             }
         }
+    }
+
+    private static func forward(
+        chunk: Data,
+        stream: CommandOutputStream,
+        outputHandler: (@Sendable (CommandOutputChunk) -> Void)?
+    ) {
+        guard !chunk.isEmpty else { return }
+        let text = String(decoding: chunk, as: UTF8.self)
+        guard !text.isEmpty else { return }
+        outputHandler?(CommandOutputChunk(stream: stream, text: text))
     }
 }
 
