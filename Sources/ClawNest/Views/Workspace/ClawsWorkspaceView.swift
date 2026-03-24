@@ -11,6 +11,7 @@ struct ClawsWorkspaceView: View {
     let selectedClawMomentPosts: [MomentFeedItem]
     let selectedClawTasks: [ClawTaskSummary]
     let onSelectClaw: (ClawSummary, ClawDetailSection) -> Void
+    let onCreateClaw: () -> Void
     let onOpenChat: (ClawSummary) -> Void
     let onStartClaw: (ClawSummary) -> Void
 
@@ -94,13 +95,13 @@ struct ClawsWorkspaceView: View {
                     Text(t("Bring in another Claw", "添加另一个 Claw"))
                         .font(.headline)
                         .foregroundStyle(AppShellPalette.textPrimary)
-                    Text(t("The installer is still the real one. This shortcut simply drops you into the Settings section where expansion lives.", "安装器仍然是可用的真实功能，这个入口只是带你跳到 Settings 里的扩展区域。"))
+                    Text(t("Open the live installer flow with validation and status feedback in a dedicated sheet instead of hiding it inside Settings.", "通过独立弹窗打开当前可用的安装流程，并直接显示校验与状态反馈，不再把它藏进 Settings。"))
                         .font(.footnote)
                         .foregroundStyle(AppShellPalette.textSecondary)
                         .fixedSize(horizontal: false, vertical: true)
 
                     Button(t("New Claw", "新建 Claw")) {
-                        onSelectClaw(currentClaw, .settings)
+                        onCreateClaw()
                     }
                     .buttonStyle(.borderedProminent)
                     .tint(currentClaw.primaryColor)
