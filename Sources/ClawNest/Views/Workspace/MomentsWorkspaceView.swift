@@ -25,12 +25,16 @@ struct MomentsWorkspaceView: View {
                             } label: {
                                 Text(filter.title)
                                     .font(.subheadline.weight(.semibold))
-                                    .foregroundStyle(activeMomentFilterID == filter.id ? Color.black : Color.white)
+                                    .foregroundStyle(activeMomentFilterID == filter.id ? AppShellPalette.textPrimary : AppShellPalette.textSecondary)
                                     .padding(.horizontal, 14)
                                     .padding(.vertical, 10)
                                     .background(
                                         Capsule()
-                                            .fill(activeMomentFilterID == filter.id ? AnyShapeStyle(filter.color) : AnyShapeStyle(Color.white.opacity(0.05)))
+                                            .fill(activeMomentFilterID == filter.id ? AnyShapeStyle(AppShellPalette.tintedFill(filter.color)) : AnyShapeStyle(AppShellPalette.subtleFill))
+                                    )
+                                    .overlay(
+                                        Capsule()
+                                            .stroke(activeMomentFilterID == filter.id ? AppShellPalette.tintedStroke(filter.color) : AppShellPalette.border.opacity(0.75), lineWidth: 1)
                                     )
                             }
                             .buttonStyle(.plain)
@@ -44,10 +48,10 @@ struct MomentsWorkspaceView: View {
                         VStack(alignment: .leading, spacing: 12) {
                             Text(t("No moments in this lane yet.", "这个分组里还没有动态。"))
                                 .font(.headline)
-                                .foregroundStyle(.white)
+                                .foregroundStyle(AppShellPalette.textPrimary)
                             Text(t("The filter is ready, but that Claw does not have any surfaced activity for now.", "筛选器已经就位，但这个 Claw 目前还没有可展示的动态。"))
                                 .font(.footnote)
-                                .foregroundStyle(.white.opacity(0.62))
+                                .foregroundStyle(AppShellPalette.textSecondary)
                         }
                     }
                 } else {

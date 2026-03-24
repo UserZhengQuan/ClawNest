@@ -83,10 +83,10 @@ struct ChatWorkspaceView: View {
                                     VStack(alignment: .leading, spacing: 4) {
                                         Text(thread.title)
                                             .font(.headline)
-                                            .foregroundStyle(.white)
+                                            .foregroundStyle(AppShellPalette.textPrimary)
                                         Text(thread.preview)
                                             .font(.subheadline)
-                                            .foregroundStyle(.white.opacity(0.66))
+                                            .foregroundStyle(AppShellPalette.textSecondary)
                                             .lineLimit(2)
                                     }
 
@@ -99,17 +99,17 @@ struct ChatWorkspaceView: View {
                                     Spacer()
                                     Text(thread.timestampText)
                                         .font(.caption.monospaced())
-                                        .foregroundStyle(.white.opacity(0.48))
+                                        .foregroundStyle(AppShellPalette.textTertiary)
                                 }
                             }
                             .padding(16)
                             .frame(maxWidth: .infinity, alignment: .leading)
                             .background(
                                 RoundedRectangle(cornerRadius: 24, style: .continuous)
-                                    .fill(selectedConversation.id == thread.id ? Color.white.opacity(0.10) : Color.white.opacity(0.04))
+                                    .fill(selectedConversation.id == thread.id ? AppShellPalette.tintedFill(thread.primaryColor) : AppShellPalette.subtleFill)
                                     .overlay(
                                         RoundedRectangle(cornerRadius: 24, style: .continuous)
-                                            .stroke(selectedConversation.id == thread.id ? thread.primaryColor.opacity(0.52) : Color.white.opacity(0.05), lineWidth: 1)
+                                            .stroke(selectedConversation.id == thread.id ? AppShellPalette.tintedStroke(thread.primaryColor) : AppShellPalette.border.opacity(0.8), lineWidth: 1)
                                     )
                             )
                         }
@@ -124,10 +124,10 @@ struct ChatWorkspaceView: View {
                 VStack(alignment: .leading, spacing: 10) {
                     Text(t("Conversation routing", "会话路由"))
                         .font(.headline)
-                        .foregroundStyle(.white)
+                        .foregroundStyle(AppShellPalette.textPrimary)
                     Text(t("Only the main dashboard-backed thread is live today. Remote multi-Claw chat sync is sketched into the UI and left as a placeholder.", "目前只有主 dashboard 会话是真实可用的，远程多 Claw 聊天同步还只是占位。"))
                         .font(.footnote)
-                        .foregroundStyle(.white.opacity(0.62))
+                        .foregroundStyle(AppShellPalette.textSecondary)
                         .fixedSize(horizontal: false, vertical: true)
                 }
             }
@@ -167,17 +167,17 @@ struct ChatWorkspaceView: View {
         VStack(alignment: .leading, spacing: 10) {
             Text(thread.title)
                 .font(.system(size: 28, weight: .bold, design: .rounded))
-                .foregroundStyle(.white)
+                .foregroundStyle(AppShellPalette.textPrimary)
 
             Text(thread.description)
                 .font(.subheadline)
-                .foregroundStyle(.white.opacity(0.66))
+                .foregroundStyle(AppShellPalette.textSecondary)
                 .fixedSize(horizontal: false, vertical: true)
 
             FlowLayout(spacing: 10, rowSpacing: 10) {
                 PillLabelView(label: thread.clawName, systemImage: "pawprint.fill", tint: thread.primaryColor)
                 PillLabelView(label: thread.agentName, systemImage: "brain.head.profile", tint: thread.secondaryColor)
-                PillLabelView(label: thread.machineLabel, systemImage: "macbook", tint: .white.opacity(0.18))
+                PillLabelView(label: thread.machineLabel, systemImage: "macbook", tint: AppShellPalette.neutralTint)
             }
             .frame(maxWidth: layout.metadataWrapWidth, alignment: .leading)
         }
@@ -220,13 +220,13 @@ struct ChatWorkspaceView: View {
                     HStack {
                         Text(t("Need the full Claw deck?", "需要完整的 Claw 视图？"))
                             .font(.headline)
-                            .foregroundStyle(.white)
+                            .foregroundStyle(AppShellPalette.textPrimary)
                         Spacer()
                     }
 
                     Text(t("Go to Claws for runtime settings, installer flow, logs, and the complete recovery surface.", "去 Claws 页面查看运行时设置、安装流程、日志和完整恢复能力。"))
                         .font(.footnote)
-                        .foregroundStyle(.white.opacity(0.62))
+                        .foregroundStyle(AppShellPalette.textSecondary)
 
                     Button(t("Open Claws", "打开 Claws")) {
                         onOpenClaws()
@@ -268,10 +268,10 @@ struct ChatWorkspaceView: View {
                     VStack(alignment: .leading, spacing: 8) {
                         Text(t("Deeper diagnostics live in Claws", "更完整的诊断在 Claws 页面"))
                             .font(.headline)
-                            .foregroundStyle(.white)
+                            .foregroundStyle(AppShellPalette.textPrimary)
                         Text(t("The caretaker thread is a soft landing. The detailed logs and runtime settings stay on the current Claw page.", "Caretaker 线程只是轻量入口，详细日志和运行时设置仍在当前 Claw 页面。"))
                             .font(.footnote)
-                            .foregroundStyle(.white.opacity(0.62))
+                            .foregroundStyle(AppShellPalette.textSecondary)
                     }
 
                     Spacer()
@@ -312,10 +312,10 @@ struct ChatWorkspaceView: View {
         VStack(alignment: .leading, spacing: 8) {
             Text(t("Installer handoff", "安装引导"))
                 .font(.headline)
-                .foregroundStyle(.white)
+                .foregroundStyle(AppShellPalette.textPrimary)
             Text(t("The install flow is fully usable already. Multi-step onboarding and prettier setup coaching will land later, so this thread simply points you at the working surface.", "安装流程已经可用，多步骤引导和更完整的新手提示后面再补，现在这个线程只负责带你到可用界面。"))
                 .font(.footnote)
-                .foregroundStyle(.white.opacity(0.62))
+                .foregroundStyle(AppShellPalette.textSecondary)
                 .fixedSize(horizontal: false, vertical: true)
         }
     }
@@ -333,11 +333,11 @@ struct ChatWorkspaceView: View {
             VStack(alignment: .leading, spacing: 16) {
                 Text(t("This conversation page is reserved.", "这个会话页已预留。"))
                     .font(.system(size: 24, weight: .bold, design: .rounded))
-                    .foregroundStyle(.white)
+                    .foregroundStyle(AppShellPalette.textPrimary)
 
                 Text(t("`\(thread.clawName)` with agent `\(thread.agentName)` is represented in the new layout, but real remote chat sync is not wired yet. The page stays empty on purpose instead of inventing fake controls.", "`\(thread.clawName)` 和 `\(thread.agentName)` 已经出现在新布局里，但真实的远程聊天同步还没接上，所以这里会故意保持为空。"))
                     .font(.body)
-                    .foregroundStyle(.white.opacity(0.66))
+                    .foregroundStyle(AppShellPalette.textSecondary)
                     .fixedSize(horizontal: false, vertical: true)
 
                 FlowLayout(spacing: 12, rowSpacing: 12) {
@@ -362,23 +362,23 @@ struct ChatWorkspaceView: View {
                 HStack {
                     Text(t("Claw presence", "Claw 状态"))
                         .font(.headline)
-                        .foregroundStyle(.white)
+                        .foregroundStyle(AppShellPalette.textPrimary)
                     Spacer()
                     StatusDotView(color: currentClaw.statusColor)
                 }
 
                 Text(model.snapshot.headline)
                     .font(.title3.weight(.semibold))
-                    .foregroundStyle(.white)
+                    .foregroundStyle(AppShellPalette.textPrimary)
 
                 Text(model.snapshot.detail)
                     .font(.footnote)
-                    .foregroundStyle(.white.opacity(0.62))
+                    .foregroundStyle(AppShellPalette.textSecondary)
                     .fixedSize(horizontal: false, vertical: true)
 
                 FlowLayout(spacing: 10, rowSpacing: 10) {
                     PillLabelView(label: model.snapshot.level.label(in: language), systemImage: model.snapshot.level.iconName, tint: currentClaw.primaryColor)
-                    PillLabelView(label: model.snapshot.lastCheck.formatted(date: .omitted, time: .shortened), systemImage: "clock", tint: .white.opacity(0.18))
+                    PillLabelView(label: model.snapshot.lastCheck.formatted(date: .omitted, time: .shortened), systemImage: "clock", tint: AppShellPalette.neutralTint)
                 }
             }
         }
@@ -389,12 +389,12 @@ struct ChatWorkspaceView: View {
             VStack(alignment: .leading, spacing: 14) {
                 Text(t("Agent focus", "Agent 焦点"))
                     .font(.headline)
-                    .foregroundStyle(.white)
+                    .foregroundStyle(AppShellPalette.textPrimary)
 
                 ForEach(Array(currentClaw.agents.prefix(3))) { agent in
                     HStack(alignment: .top, spacing: 12) {
                         Circle()
-                            .fill(currentClaw.primaryColor.opacity(0.22))
+                            .fill(AppShellPalette.tintedFill(currentClaw.primaryColor, opacity: 0.14))
                             .frame(width: 34, height: 34)
                             .overlay(
                                 Image(systemName: "sparkles")
@@ -405,13 +405,13 @@ struct ChatWorkspaceView: View {
                         VStack(alignment: .leading, spacing: 4) {
                             Text(agent.name)
                                 .font(.subheadline.weight(.semibold))
-                                .foregroundStyle(.white)
+                                .foregroundStyle(AppShellPalette.textPrimary)
                             Text(agent.role)
                                 .font(.caption)
-                                .foregroundStyle(.white.opacity(0.62))
+                                .foregroundStyle(AppShellPalette.textSecondary)
                             Text(agent.status)
                                 .font(.caption.weight(.medium))
-                                .foregroundStyle(.white.opacity(0.48))
+                                .foregroundStyle(AppShellPalette.textTertiary)
                         }
                         Spacer()
                     }

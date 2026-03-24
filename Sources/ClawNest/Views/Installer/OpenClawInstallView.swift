@@ -54,7 +54,7 @@ struct OpenClawInstallView: View {
                 VStack(alignment: .leading, spacing: 12) {
                     Text(installStatusMessage)
                         .font(.system(.callout, design: .monospaced))
-                        .foregroundStyle(.white.opacity(0.70))
+                        .foregroundStyle(AppShellPalette.textSecondary)
                         .textSelection(.enabled)
                         .frame(maxWidth: .infinity, alignment: .leading)
 
@@ -73,7 +73,7 @@ struct OpenClawInstallView: View {
                         installButton
                         Text(localized("Every install gets its own state, workspace, and reserved port range.", "每次安装都会创建独立 state、workspace 和保留端口范围。", language: language))
                             .font(.caption)
-                            .foregroundStyle(.white.opacity(0.56))
+                            .foregroundStyle(AppShellPalette.textTertiary)
                             .fixedSize(horizontal: false, vertical: true)
                     }
                 } else {
@@ -81,7 +81,7 @@ struct OpenClawInstallView: View {
                         installButton
                         Text(localized("Every install gets its own state, workspace, and reserved port range.", "每次安装都会创建独立 state、workspace 和保留端口范围。", language: language))
                             .font(.caption)
-                            .foregroundStyle(.white.opacity(0.56))
+                            .foregroundStyle(AppShellPalette.textTertiary)
                             .fixedSize(horizontal: false, vertical: true)
                     }
                 }
@@ -95,7 +95,7 @@ struct OpenClawInstallView: View {
         VStack(alignment: .leading, spacing: 14) {
             Text(localized("Install directory", "安装目录", language: language))
                 .font(.caption.weight(.semibold))
-                .foregroundStyle(.white.opacity(0.56))
+                .foregroundStyle(AppShellPalette.textTertiary)
 
             HStack(spacing: 10) {
                 TextField(localized("Install directory", "安装目录", language: language), text: directoryBinding)
@@ -115,7 +115,7 @@ struct OpenClawInstallView: View {
         VStack(alignment: .leading, spacing: 14) {
             Text(localized("Gateway port", "网关端口", language: language))
                 .font(.caption.weight(.semibold))
-                .foregroundStyle(.white.opacity(0.56))
+                .foregroundStyle(AppShellPalette.textTertiary)
 
             TextField("19789", text: portBinding)
                 .textFieldStyle(.roundedBorder)
@@ -136,13 +136,13 @@ struct OpenClawInstallView: View {
     private var validationBanner: some View {
         Text(model.installValidation.message)
             .font(.subheadline.weight(.medium))
-            .foregroundStyle(.white)
+            .foregroundStyle(AppShellPalette.textPrimary)
             .padding(14)
             .frame(maxWidth: .infinity, alignment: .leading)
             .background(
                 (model.installValidation.isValid
-                    ? Color(red: 0.12, green: 0.34, blue: 0.21)
-                    : Color(red: 0.35, green: 0.13, blue: 0.15)),
+                    ? Color(red: 0.89, green: 0.96, blue: 0.91)
+                    : Color(red: 0.98, green: 0.91, blue: 0.90)),
                 in: RoundedRectangle(cornerRadius: ClawNestLayout.Radius.medium - 2, style: .continuous)
             )
     }
@@ -160,46 +160,46 @@ struct OpenClawInstallView: View {
         VStack(alignment: .leading, spacing: 8) {
             Text(label)
                 .font(.caption.weight(.semibold))
-                .foregroundStyle(.white.opacity(0.56))
+                .foregroundStyle(AppShellPalette.textTertiary)
             Text(value)
                 .font(.system(.callout, design: .monospaced))
-                .foregroundStyle(.white)
+                .foregroundStyle(AppShellPalette.textPrimary)
                 .lineLimit(4)
                 .frame(maxWidth: .infinity, alignment: .leading)
         }
         .padding(16)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Color.white.opacity(0.05), in: RoundedRectangle(cornerRadius: ClawNestLayout.Radius.medium - 2, style: .continuous))
+        .background(AppShellPalette.subtleFill, in: RoundedRectangle(cornerRadius: ClawNestLayout.Radius.medium - 2, style: .continuous))
     }
 
     private var knownInstances: some View {
         VStack(alignment: .leading, spacing: 12) {
             Text(localized("Known Claws", "已知 Claw", language: language))
                 .font(.headline)
-                .foregroundStyle(.white)
+                .foregroundStyle(AppShellPalette.textPrimary)
 
             ForEach(model.knownOpenClawInstances) { instance in
                 HStack(alignment: .top, spacing: 12) {
                     Text(String(instance.gatewayPort))
                         .font(.system(.body, design: .monospaced))
-                        .foregroundStyle(.white)
+                        .foregroundStyle(AppShellPalette.textPrimary)
                         .padding(.horizontal, 10)
                         .padding(.vertical, 6)
-                        .background(Color.white.opacity(0.06), in: Capsule())
+                        .background(AppShellPalette.subtleStrongFill, in: Capsule())
 
                     VStack(alignment: .leading, spacing: 4) {
                         Text(instance.launchAgentLabel)
                             .font(.subheadline.weight(.semibold))
-                            .foregroundStyle(.white)
+                            .foregroundStyle(AppShellPalette.textPrimary)
                         Text(instance.installDirectoryPath)
                             .font(.caption.monospaced())
-                            .foregroundStyle(.white.opacity(0.56))
+                            .foregroundStyle(AppShellPalette.textTertiary)
                     }
 
                     Spacer()
                 }
                 .padding(14)
-                .background(Color.white.opacity(0.04), in: RoundedRectangle(cornerRadius: ClawNestLayout.Radius.medium - 2, style: .continuous))
+                .background(AppShellPalette.subtleFill, in: RoundedRectangle(cornerRadius: ClawNestLayout.Radius.medium - 2, style: .continuous))
             }
         }
     }

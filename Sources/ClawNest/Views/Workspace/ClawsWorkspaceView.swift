@@ -58,7 +58,7 @@ struct ClawsWorkspaceView: View {
         VStack(alignment: .leading, spacing: 18) {
             PanelHeaderView(
                 title: t("Claw List", "Claw 列表"),
-                subtitle: t("Warm cards, strong hierarchy, instant distinction.", "卡片温暖、层次清晰、彼此一眼可分。")
+                subtitle: t("Pick a worker by identity, then open its home on the right.", "先按身份选择一个 worker，再在右侧打开它的主页。")
             )
 
             HStack(spacing: 10) {
@@ -93,10 +93,10 @@ struct ClawsWorkspaceView: View {
                 VStack(alignment: .leading, spacing: 12) {
                     Text(t("Bring in another Claw", "添加另一个 Claw"))
                         .font(.headline)
-                        .foregroundStyle(.white)
+                        .foregroundStyle(AppShellPalette.textPrimary)
                     Text(t("The installer is still the real one. This shortcut simply drops you into the Settings section where expansion lives.", "安装器仍然是可用的真实功能，这个入口只是带你跳到 Settings 里的扩展区域。"))
                         .font(.footnote)
-                        .foregroundStyle(.white.opacity(0.62))
+                        .foregroundStyle(AppShellPalette.textSecondary)
                         .fixedSize(horizontal: false, vertical: true)
 
                     Button(t("New Claw", "新建 Claw")) {
@@ -110,113 +110,83 @@ struct ClawsWorkspaceView: View {
     }
 
     private func clawCard(_ claw: ClawSummary) -> some View {
-        VStack(alignment: .leading, spacing: 14) {
+        let status = simplifiedCardStatus(for: claw)
+
+        return Button {
+            onSelectClaw(claw, .overview)
+        } label: {
             HStack(alignment: .top, spacing: 14) {
                 AvatarBadgeView(
                     text: claw.avatarText,
                     primaryColor: claw.primaryColor,
                     secondaryColor: claw.secondaryColor,
-                    size: 58
+                    size: 56
                 )
 
-                VStack(alignment: .leading, spacing: 7) {
-                    HStack(spacing: 8) {
-                        Text(claw.name)
-                            .font(.headline)
-                            .foregroundStyle(.white)
-                        if claw.isCurrent {
-                            PillLabelView(label: t("Current", "当前"), systemImage: "heart.fill", tint: claw.primaryColor)
-                        }
-                    }
-
-                    HStack(spacing: 8) {
-                        StatusDotView(color: claw.statusColor)
-                        Text(claw.statusLabel)
-                            .font(.subheadline.weight(.medium))
-                            .foregroundStyle(.white.opacity(0.86))
-                    }
+                VStack(alignment: .leading, spacing: 8) {
+                    Text(claw.name)
+                        .font(.headline)
+                        .foregroundStyle(AppShellPalette.textPrimary)
 
                     Text(claw.machineLabel)
-                        .font(.footnote)
-                        .foregroundStyle(.white.opacity(0.60))
+                        .font(.subheadline)
+                        .foregroundStyle(AppShellPalette.textSecondary)
                         .lineLimit(2)
+
+                    HStack(spacing: 8) {
+                        StatusDotView(color: status.tint)
+                        Text(status.label)
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundStyle(AppShellPalette.textPrimary)
+                    }
+
+                    HStack(spacing: 6) {
+                        Text("\(claw.agents.count) \(t("agents", "agents"))")
+                        Text("•")
+                        Text(claw.lastActiveAt.formatted(date: .omitted, time: .shortened))
+                    }
+                    .font(.caption)
+                    .foregroundStyle(AppShellPalette.textTertiary)
                 }
 
                 Spacer(minLength: 0)
-
-                if let badge = claw.alertBadge {
-                    WarningBadgeView(badge: badge)
-                }
             }
+            .padding(16)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(
+                RoundedRectangle(cornerRadius: 22, style: .continuous)
+                    .fill(selectedClaw.id == claw.id ? AppShellPalette.tintedFill(claw.primaryColor, opacity: 0.09) : Color.white.opacity(0.88))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 22, style: .continuous)
+                            .stroke(selectedClaw.id == claw.id ? AppShellPalette.tintedStroke(claw.primaryColor, opacity: 0.26) : AppShellPalette.border.opacity(0.85), lineWidth: 1)
+                    )
+                    .shadow(color: AppShellPalette.shadow.opacity(selectedClaw.id == claw.id ? 1 : 0.65), radius: 8, y: 3)
+            )
+        }
+        .buttonStyle(.plain)
+    }
 
-            FlowLayout(spacing: 12, rowSpacing: 12) {
-                clawMetaPill(title: t("Last active", "最近活跃"), value: claw.lastActiveAt.formatted(date: .omitted, time: .shortened))
-                clawMetaPill(title: t("Agents", "Agents"), value: "\(claw.agents.count)")
-                clawMetaPill(title: t("Health", "健康"), value: claw.healthLabel)
-            }
-
-            LazyVGrid(columns: [GridItem(.adaptive(minimum: layout.quickActionMinimumWidth), spacing: 8)], spacing: 8) {
-                QuickActionButton(
-                    title: t("Chat", "聊天"),
-                    systemImage: "message.fill",
-                    tint: claw.primaryColor
-                ) {
-                    onOpenChat(claw)
-                }
-
-                QuickActionButton(
-                    title: t("Start", "启动"),
-                    systemImage: "play.fill",
-                    tint: Color(red: 0.28, green: 0.76, blue: 0.48),
-                    disabled: !claw.canStart || model.isBusy
-                ) {
-                    onStartClaw(claw)
-                }
-
-                QuickActionButton(
-                    title: t("Stop", "停止"),
-                    systemImage: "stop.fill",
-                    tint: Color(red: 0.92, green: 0.39, blue: 0.38),
-                    disabled: true
-                ) { }
-                .help(t("Per-instance stop control is not implemented yet.", "按实例停止控制暂时还没有实现。"))
-
-                QuickActionButton(
-                    title: t("Details", "详情"),
-                    systemImage: "rectangle.inset.filled.and.person.filled",
-                    tint: claw.secondaryColor
-                ) {
-                    onSelectClaw(claw, .overview)
-                }
+    private func simplifiedCardStatus(for claw: ClawSummary) -> (label: String, tint: Color) {
+        if claw.isCurrent {
+            switch model.snapshot.level {
+            case .healthy:
+                return (t("Running", "运行中"), Color(red: 0.23, green: 0.67, blue: 0.42))
+            case .recovering:
+                return (t("Starting", "启动中"), Color(red: 0.29, green: 0.58, blue: 0.86))
+            case .degraded:
+                return (t("Error", "异常"), Color(red: 0.89, green: 0.53, blue: 0.22))
+            case .offline:
+                return (t("Stopped", "已停止"), AppShellPalette.textTertiary)
+            case .missingCLI:
+                return (t("Error", "异常"), Color(red: 0.85, green: 0.34, blue: 0.31))
             }
         }
-        .padding(16)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(
-            RoundedRectangle(cornerRadius: 26, style: .continuous)
-                .fill(selectedClaw.id == claw.id ? Color.white.opacity(0.09) : Color.white.opacity(0.04))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 26, style: .continuous)
-                        .stroke(selectedClaw.id == claw.id ? claw.primaryColor.opacity(0.42) : Color.white.opacity(0.05), lineWidth: 1)
-                )
-                .overlay(alignment: .topLeading) {
-                    Capsule()
-                        .fill(
-                            LinearGradient(
-                                colors: [claw.primaryColor, claw.secondaryColor],
-                                startPoint: .leading,
-                                endPoint: .trailing
-                            )
-                        )
-                        .frame(width: 92, height: 6)
-                        .padding(.top, 14)
-                        .padding(.leading, 14)
-                }
-        )
-        .contentShape(RoundedRectangle(cornerRadius: 26, style: .continuous))
-        .onTapGesture {
-            onSelectClaw(claw, .overview)
+
+        if claw.isOnline {
+            return (t("Running", "运行中"), Color(red: 0.23, green: 0.67, blue: 0.42))
         }
+
+        return (t("Stopped", "已停止"), AppShellPalette.textTertiary)
     }
 
     private var selectedClawHomeHeader: some View {
@@ -250,7 +220,7 @@ struct ClawsWorkspaceView: View {
                 FlowLayout(spacing: 10, rowSpacing: 10) {
                     Text(selectedClaw.name)
                         .font(.system(size: 30, weight: .bold, design: .rounded))
-                        .foregroundStyle(.white)
+                        .foregroundStyle(AppShellPalette.textPrimary)
                     if selectedClaw.isCurrent {
                         PillLabelView(label: t("Current", "当前"), systemImage: "bolt.fill", tint: selectedClaw.primaryColor)
                     }
@@ -261,13 +231,13 @@ struct ClawsWorkspaceView: View {
 
                 Text(selectedClaw.statusDescription)
                     .font(.body)
-                    .foregroundStyle(.white.opacity(0.66))
+                    .foregroundStyle(AppShellPalette.textSecondary)
                     .fixedSize(horizontal: false, vertical: true)
 
                 FlowLayout(spacing: 10, rowSpacing: 10) {
-                    PillLabelView(label: selectedClaw.machineLabel, systemImage: "macbook", tint: .white.opacity(0.18))
+                    PillLabelView(label: selectedClaw.machineLabel, systemImage: "macbook", tint: AppShellPalette.neutralTint)
                     PillLabelView(label: "\(selectedClaw.agents.count) \(t("agents", "agents"))", systemImage: "person.2.fill", tint: selectedClaw.secondaryColor)
-                    PillLabelView(label: selectedClaw.lastActiveAt.formatted(date: .abbreviated, time: .shortened), systemImage: "clock", tint: .white.opacity(0.18))
+                    PillLabelView(label: selectedClaw.lastActiveAt.formatted(date: .abbreviated, time: .shortened), systemImage: "clock", tint: AppShellPalette.neutralTint)
                     PillLabelView(label: selectedClaw.launchAgentLabel, systemImage: "antenna.radiowaves.left.and.right", tint: selectedClaw.secondaryColor)
                 }
                 .frame(maxWidth: layout.metadataWrapWidth, alignment: .leading)
@@ -307,22 +277,20 @@ struct ClawsWorkspaceView: View {
                             Text(section.title(in: language))
                         }
                         .font(.subheadline.weight(.semibold))
-                        .foregroundStyle(selectedClawDetailSection == section ? Color.black : Color.white)
+                        .foregroundStyle(selectedClawDetailSection == section ? AppShellPalette.textPrimary : AppShellPalette.textSecondary)
                         .padding(.horizontal, 14)
                         .padding(.vertical, 10)
                         .background(
                             Capsule()
                                 .fill(
                                     selectedClawDetailSection == section
-                                        ? AnyShapeStyle(
-                                            LinearGradient(
-                                                colors: [selectedClaw.primaryColor, selectedClaw.secondaryColor],
-                                                startPoint: .leading,
-                                                endPoint: .trailing
-                                            )
-                                        )
-                                        : AnyShapeStyle(Color.white.opacity(0.05))
+                                        ? AnyShapeStyle(AppShellPalette.tintedFill(selectedClaw.primaryColor))
+                                        : AnyShapeStyle(AppShellPalette.subtleFill)
                                 )
+                        )
+                        .overlay(
+                            Capsule()
+                                .stroke(selectedClawDetailSection == section ? AppShellPalette.tintedStroke(selectedClaw.primaryColor) : AppShellPalette.border.opacity(0.75), lineWidth: 1)
                         )
                     }
                     .buttonStyle(.plain)
@@ -550,10 +518,10 @@ struct ClawsWorkspaceView: View {
         VStack(alignment: .leading, spacing: 8) {
             Text(t("Need the live settings surface?", "需要当前可用的设置界面？"))
                 .font(.headline)
-                .foregroundStyle(.white)
+                .foregroundStyle(AppShellPalette.textPrimary)
             Text(t("Jump back to the active Claw to edit runtime configuration or install another Claw.", "跳回活动 Claw 页面，就能编辑运行时配置或安装另一个 Claw。"))
                 .font(.footnote)
-                .foregroundStyle(.white.opacity(0.62))
+                .foregroundStyle(AppShellPalette.textSecondary)
         }
     }
 
@@ -570,11 +538,11 @@ struct ClawsWorkspaceView: View {
             VStack(alignment: .leading, spacing: 16) {
                 Text(t("This Claw has a place, but not a full live link yet.", "这个 Claw 已经有位置，但还没有完整的实时连接。"))
                     .font(.system(size: 24, weight: .bold, design: .rounded))
-                    .foregroundStyle(.white)
+                    .foregroundStyle(AppShellPalette.textPrimary)
 
                 Text(t("You can already distinguish it, enter its detail home, and see its agents and reserved ports. Full remote lifecycle and telemetry support are still a placeholder.", "你已经可以区分它、进入它的主页，并查看它的 agents 和保留端口。完整的远程生命周期与遥测支持仍然是占位功能。"))
                     .font(.body)
-                    .foregroundStyle(.white.opacity(0.66))
+                    .foregroundStyle(AppShellPalette.textSecondary)
                     .fixedSize(horizontal: false, vertical: true)
 
                 DetailFactsGrid(
@@ -594,7 +562,7 @@ struct ClawsWorkspaceView: View {
             VStack(alignment: .leading, spacing: 14) {
                 Text(t("Overview", "概览"))
                     .font(.headline)
-                    .foregroundStyle(.white)
+                    .foregroundStyle(AppShellPalette.textPrimary)
 
                 DetailFactsGrid(
                     layout: layout,
@@ -606,7 +574,7 @@ struct ClawsWorkspaceView: View {
 
                 Text(t("Health, runtime controls, and install/repair actions are already real. Tasks, remote telemetry, and deeper per-Claw settings are staged into the new layout without pretending they are done.", "健康状态、运行控制和安装/修复操作已经是真实可用的。任务、远程遥测和更深的按 Claw 设置则已经被安放到新布局里，但不会伪装成已完成功能。"))
                     .font(.footnote)
-                    .foregroundStyle(.white.opacity(0.62))
+                    .foregroundStyle(AppShellPalette.textSecondary)
                     .fixedSize(horizontal: false, vertical: true)
             }
         }
@@ -619,10 +587,10 @@ struct ClawsWorkspaceView: View {
                     VStack(alignment: .leading, spacing: 4) {
                         Text(agent.name)
                             .font(.headline)
-                            .foregroundStyle(.white)
+                            .foregroundStyle(AppShellPalette.textPrimary)
                         Text(agent.role)
                             .font(.subheadline)
-                            .foregroundStyle(.white.opacity(0.62))
+                            .foregroundStyle(AppShellPalette.textSecondary)
                     }
 
                     Spacer()
@@ -661,7 +629,7 @@ struct ClawsWorkspaceView: View {
             VStack(alignment: .leading, spacing: 14) {
                 HStack(alignment: .top, spacing: 12) {
                     RoundedRectangle(cornerRadius: 16, style: .continuous)
-                        .fill(task.tint.opacity(0.20))
+                        .fill(AppShellPalette.tintedFill(task.tint, opacity: 0.14))
                         .frame(width: 42, height: 42)
                         .overlay(
                             Image(systemName: task.systemImage)
@@ -672,10 +640,10 @@ struct ClawsWorkspaceView: View {
                     VStack(alignment: .leading, spacing: 5) {
                         Text(task.title)
                             .font(.headline)
-                            .foregroundStyle(.white)
+                            .foregroundStyle(AppShellPalette.textPrimary)
                         Text(task.detail)
                             .font(.subheadline)
-                            .foregroundStyle(.white.opacity(0.66))
+                            .foregroundStyle(AppShellPalette.textSecondary)
                             .fixedSize(horizontal: false, vertical: true)
                     }
 
@@ -687,7 +655,7 @@ struct ClawsWorkspaceView: View {
                             .foregroundStyle(task.tint)
                         Text(task.timestamp.formatted(date: .abbreviated, time: .shortened))
                             .font(.caption.monospaced())
-                            .foregroundStyle(.white.opacity(0.48))
+                            .foregroundStyle(AppShellPalette.textTertiary)
                     }
                 }
             }
@@ -698,15 +666,15 @@ struct ClawsWorkspaceView: View {
         VStack(alignment: .leading, spacing: 4) {
             Text(title)
                 .font(.caption2.weight(.semibold))
-                .foregroundStyle(.white.opacity(0.48))
+                .foregroundStyle(AppShellPalette.textTertiary)
             Text(value)
                 .font(.caption.weight(.semibold))
-                .foregroundStyle(.white)
+                .foregroundStyle(AppShellPalette.textPrimary)
                 .lineLimit(1)
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 10)
-        .background(Color.white.opacity(0.05), in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .background(AppShellPalette.subtleFill, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
     }
 
     private func t(_ english: String, _ simplifiedChinese: String) -> String {

@@ -47,6 +47,19 @@ enum WorkspaceSection: String, CaseIterable, Identifiable {
             return "person.crop.circle.fill"
         }
     }
+
+    var sidebarTint: Color {
+        switch self {
+        case .chat:
+            return Color(red: 0.33, green: 0.60, blue: 0.86)
+        case .claws:
+            return Color(red: 0.84, green: 0.58, blue: 0.33)
+        case .moments:
+            return Color(red: 0.35, green: 0.67, blue: 0.52)
+        case .mine:
+            return Color(red: 0.44, green: 0.50, blue: 0.62)
+        }
+    }
 }
 
 struct ClawPalette {

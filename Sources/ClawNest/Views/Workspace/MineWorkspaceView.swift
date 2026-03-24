@@ -45,10 +45,10 @@ struct MineWorkspaceView: View {
                         VStack(alignment: .leading, spacing: 8) {
                             Text(t("Need actual controls?", "需要真正的控制入口？"))
                                 .font(.headline)
-                                .foregroundStyle(.white)
+                                .foregroundStyle(AppShellPalette.textPrimary)
                             Text(t("Open the current Claw for runtime settings and installer work, or Moments for the activity feed.", "去当前 Claw 页面查看运行时设置和安装功能，或者去 Moments 页面看动态流。"))
                                 .font(.footnote)
-                                .foregroundStyle(.white.opacity(0.62))
+                                .foregroundStyle(AppShellPalette.textSecondary)
                         }
 
                         Spacer()
@@ -87,16 +87,16 @@ struct MineWorkspaceView: View {
                     VStack(alignment: .leading, spacing: 4) {
                         Text(t("You", "你"))
                             .font(.system(size: 28, weight: .bold, design: .rounded))
-                            .foregroundStyle(.white)
+                            .foregroundStyle(AppShellPalette.textPrimary)
                         Text(t("Claw keeper", "Claw 管理者"))
                             .font(.headline)
-                            .foregroundStyle(.white.opacity(0.66))
+                            .foregroundStyle(AppShellPalette.textSecondary)
                     }
                 }
 
                 Text(t("ClawNest already knows your active Mac, your current Claw, and the live feed of moments. Account sync, profile themes, and cross-device identity are still placeholders.", "ClawNest 已经知道你当前的 Mac、当前 Claw 和动态流。账号同步、主题和跨设备身份仍然是占位功能。"))
                     .font(.body)
-                    .foregroundStyle(.white.opacity(0.68))
+                    .foregroundStyle(AppShellPalette.textSecondary)
                     .fixedSize(horizontal: false, vertical: true)
 
                 DetailFactsGrid(
@@ -115,7 +115,7 @@ struct MineWorkspaceView: View {
             VStack(alignment: .leading, spacing: 16) {
                 Text(t("Connected devices", "已连接设备"))
                     .font(.headline)
-                    .foregroundStyle(.white)
+                    .foregroundStyle(AppShellPalette.textPrimary)
 
                 ConnectedDeviceRow(
                     name: Host.current().localizedName ?? "This Mac",
@@ -144,12 +144,12 @@ struct MineWorkspaceView: View {
             VStack(alignment: .leading, spacing: 14) {
                 Text(t("Settings", "设置"))
                     .font(.headline)
-                    .foregroundStyle(.white)
+                    .foregroundStyle(AppShellPalette.textPrimary)
 
                 VStack(alignment: .leading, spacing: 8) {
                     Text(t("Language", "语言"))
                         .font(.caption.weight(.semibold))
-                        .foregroundStyle(.white.opacity(0.56))
+                        .foregroundStyle(AppShellPalette.textTertiary)
 
                     Picker("", selection: Binding(
                         get: { model.language },
@@ -164,7 +164,7 @@ struct MineWorkspaceView: View {
 
                 Text(t("English is the default. Simplified Chinese is available for the app shell and key controls.", "默认语言为 English。现在支持将应用外壳和关键控件切换为简体中文。"))
                     .font(.footnote)
-                    .foregroundStyle(.white.opacity(0.62))
+                    .foregroundStyle(AppShellPalette.textSecondary)
                     .fixedSize(horizontal: false, vertical: true)
             }
         }
@@ -175,10 +175,10 @@ struct MineWorkspaceView: View {
             VStack(alignment: .leading, spacing: 14) {
                 Text(t("Global preferences", "全局偏好"))
                     .font(.headline)
-                    .foregroundStyle(.white)
+                    .foregroundStyle(AppShellPalette.textPrimary)
                 Text(t("Notification routing, feed density, personality presets, and account-level privacy rules are reserved here. The UI is laid out, but these controls are intentionally left empty for now.", "通知方式、动态密度、人格预设和账号级隐私规则都会放在这里。界面先留好，功能暂时不接。"))
                     .font(.footnote)
-                    .foregroundStyle(.white.opacity(0.62))
+                    .foregroundStyle(AppShellPalette.textSecondary)
                     .fixedSize(horizontal: false, vertical: true)
             }
         }
@@ -189,10 +189,10 @@ struct MineWorkspaceView: View {
             VStack(alignment: .leading, spacing: 14) {
                 Text(t("Personalization", "个性化"))
                     .font(.headline)
-                    .foregroundStyle(.white)
+                    .foregroundStyle(AppShellPalette.textPrimary)
                 Text(t("Avatar themes, nicknames for Claws, and warm profile customization belong on this page. Nothing is wired yet, so this remains a placeholder card.", "头像主题、Claw 昵称和更柔和的个人定制都会放在这里。目前还没接功能，所以先保留成占位卡片。"))
                     .font(.footnote)
-                    .foregroundStyle(.white.opacity(0.62))
+                    .foregroundStyle(AppShellPalette.textSecondary)
                     .fixedSize(horizontal: false, vertical: true)
             }
         }

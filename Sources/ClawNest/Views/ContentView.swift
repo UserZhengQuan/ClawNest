@@ -4,7 +4,7 @@ import SwiftUI
 struct ContentView: View {
     @ObservedObject var model: AppModel
 
-    @State private var selectedSection: WorkspaceSection = .chat
+    @State private var selectedSection: WorkspaceSection = .claws
     @State private var selectedConversationID: String?
     @State private var selectedClawID: String?
     @State private var selectedClawDetailSection: ClawDetailSection = .overview
@@ -21,24 +21,19 @@ struct ContentView: View {
                     WorkspaceSidebarView(
                         layout: layout,
                         language: currentLanguage,
-                        currentClaw: currentClaw,
                         selectedSection: selectedSection,
-                        liveClawCount: claws.filter(\.isOnline).count,
-                        clawCount: claws.count,
-                        momentCount: momentPosts.count,
-                        snapshot: model.snapshot,
                         onSelectSection: { selectedSection = $0 }
                     )
 
                     Divider()
-                        .overlay(Color.white.opacity(0.08))
+                        .overlay(AppShellPalette.divider)
 
                     detailSurface(layout: layout)
                 }
                 .padding(layout.rootPadding)
             }
         }
-        .preferredColorScheme(.dark)
+        .preferredColorScheme(.light)
         .frame(minWidth: ClawNestLayout.Window.minimumWidth, minHeight: ClawNestLayout.Window.minimumHeight)
     }
 
@@ -267,7 +262,7 @@ struct ContentView: View {
                 detail: t("Task history for non-current Claws has a reserved slot in the UI, but the data bridge is not wired yet.", "非当前 Claw 的任务历史已经在 UI 里预留位置，但数据桥还没有接上。"),
                 statusLabel: t("Soon", "即将支持"),
                 systemImage: "clock.arrow.2.circlepath",
-                tint: Color.white.opacity(0.72),
+                tint: AppShellPalette.neutralTint,
                 timestamp: selectedClaw.lastActiveAt
             ),
             ClawTaskSummary(
@@ -514,7 +509,7 @@ struct ContentView: View {
 
     private var momentFilters: [WorkspaceMomentFilter] {
         [
-            WorkspaceMomentFilter(id: WorkspaceMomentFilter.allID, title: t("All Claws", "所有 Claw"), color: Color.white.opacity(0.78))
+            WorkspaceMomentFilter(id: WorkspaceMomentFilter.allID, title: t("All Claws", "所有 Claw"), color: AppShellPalette.neutralTint)
         ] + claws.map {
             WorkspaceMomentFilter(id: $0.id, title: $0.name, color: $0.primaryColor)
         }
