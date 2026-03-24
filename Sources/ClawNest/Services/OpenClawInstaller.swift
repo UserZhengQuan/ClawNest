@@ -93,6 +93,8 @@ actor OpenClawInstaller {
         portInspector: PortInspector = PortInspector(),
         homeDirectory: URL = FileManager.default.homeDirectoryForCurrentUser
     ) {
+        _ = portInspector
+        _ = homeDirectory
         self.runner = runner
         self.registryStore = registryStore
     }
