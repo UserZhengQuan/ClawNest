@@ -27,7 +27,7 @@ final class HealthProbeInterpreterTests: XCTestCase {
         XCTAssertTrue(snapshot.metrics.contains(StatusMetric("Mode", value: "local")))
     }
 
-    func testOfflineProbeRecommendsRepair() {
+    func testOfflineProbeKeepsFailureDetail() {
         let result = CommandResult(
             command: "openclaw",
             arguments: ["health", "--json"],
@@ -45,7 +45,6 @@ final class HealthProbeInterpreterTests: XCTestCase {
         )
 
         XCTAssertEqual(snapshot.level, .offline)
-        XCTAssertTrue(snapshot.suggestedActions.contains(.repairConfiguration))
         XCTAssertEqual(snapshot.detail, "unauthorized")
     }
 
@@ -67,6 +66,6 @@ final class HealthProbeInterpreterTests: XCTestCase {
         )
 
         XCTAssertEqual(snapshot.level, .missingCLI)
-        XCTAssertEqual(snapshot.suggestedActions, [.openInstallGuide])
+        XCTAssertEqual(snapshot.detail, "ClawNest cannot manage the gateway until `openclaw` is available on the machine.")
     }
 }

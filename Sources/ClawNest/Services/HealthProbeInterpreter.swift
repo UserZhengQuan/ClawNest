@@ -25,8 +25,7 @@ struct HealthProbeInterpreter {
                     extra: []
                 ),
                 rawProbe: rawProbe,
-                logSummary: logSummary,
-                suggestedActions: [.openInstallGuide]
+                logSummary: logSummary
             )
         }
 
@@ -89,24 +88,8 @@ struct HealthProbeInterpreter {
             dashboardURL: configuration.dashboardURL,
             metrics: metrics,
             rawProbe: rawProbe,
-            logSummary: logSummary,
-            suggestedActions: suggestedActions(for: level)
+            logSummary: logSummary
         )
-    }
-
-    private func suggestedActions(for level: GatewayStatusLevel) -> [RecoveryAction] {
-        switch level {
-        case .healthy:
-            return [.refresh, .openDashboard, .revealLogs]
-        case .recovering:
-            return [.refresh, .restartGateway, .openDashboard, .revealLogs]
-        case .degraded:
-            return [.refresh, .restartGateway, .repairConfiguration, .revealLogs]
-        case .offline:
-            return [.restartGateway, .installLaunchAgent, .repairConfiguration, .revealLogs]
-        case .missingCLI:
-            return [.openInstallGuide]
-        }
     }
 
     private func baseMetrics(

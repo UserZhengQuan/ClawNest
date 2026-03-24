@@ -93,7 +93,7 @@ struct WorkspaceSidebarView: View {
 
     private var sidebarNavigationSection: some View {
         VStack(spacing: 10) {
-            ForEach([WorkspaceSection.claws]) { section in
+            ForEach([WorkspaceSection.claw]) { section in
                 Button {
                     onSelectSection(section)
                 } label: {
@@ -242,23 +242,6 @@ struct StatusDotView: View {
     }
 }
 
-struct WarningBadgeView: View {
-    let badge: ClawAlertBadge
-
-    var body: some View {
-        Label(badge.label, systemImage: badge.systemImage)
-            .font(.caption.weight(.bold))
-            .foregroundStyle(badge.tint)
-            .padding(.horizontal, 10)
-            .padding(.vertical, 7)
-            .background(AppShellPalette.tintedFill(badge.tint, opacity: 0.14), in: Capsule())
-            .overlay(
-                Capsule()
-                    .stroke(AppShellPalette.tintedStroke(badge.tint, opacity: 0.20), lineWidth: 1)
-            )
-    }
-}
-
 struct QuickActionButton: View {
     let title: String
     let systemImage: String
@@ -389,58 +372,6 @@ struct ConnectedDeviceRow: View {
         .padding(14)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(AppShellPalette.subtleFill, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
-    }
-}
-
-struct MomentCardView: View {
-    let post: MomentFeedItem
-
-    var body: some View {
-        ShellCard {
-            VStack(alignment: .leading, spacing: 16) {
-                HStack(alignment: .top, spacing: 14) {
-                    AvatarBadgeView(
-                        text: post.clawAvatar,
-                        primaryColor: post.primaryColor,
-                        secondaryColor: post.secondaryColor,
-                        size: 58
-                    )
-
-                    VStack(alignment: .leading, spacing: 5) {
-                        HStack(spacing: 10) {
-                            Text(post.clawName)
-                                .font(.headline)
-                                .foregroundStyle(AppShellPalette.textPrimary)
-                            PillLabelView(label: post.kindLabel, systemImage: post.iconName, tint: post.primaryColor)
-                        }
-
-                        Text(post.headline)
-                            .font(.system(size: 22, weight: .bold, design: .rounded))
-                            .foregroundStyle(AppShellPalette.textPrimary)
-
-                        Text(post.timestamp.formatted(date: .abbreviated, time: .shortened))
-                            .font(.caption.monospaced())
-                            .foregroundStyle(AppShellPalette.textTertiary)
-                    }
-
-                    Spacer()
-                }
-
-                Text(post.body)
-                    .font(.body)
-                    .foregroundStyle(AppShellPalette.textSecondary)
-                    .fixedSize(horizontal: false, vertical: true)
-
-                if let command = post.command {
-                    Text(command)
-                        .font(.system(.callout, design: .monospaced))
-                        .foregroundStyle(AppShellPalette.textSecondary)
-                        .padding(12)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .background(AppShellPalette.codeBackground, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
-                }
-            }
-        }
     }
 }
 

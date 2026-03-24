@@ -65,72 +65,118 @@ struct StatusMetric: Identifiable, Equatable, Sendable {
     }
 }
 
-enum RecoveryAction: String, CaseIterable, Identifiable, Sendable {
-    case refresh
+enum RuntimeAction: String, CaseIterable, Identifiable, Sendable {
+    case install
+    case repair
+    case start
+    case restart
     case openDashboard
-    case restartGateway
-    case installLaunchAgent
-    case repairConfiguration
     case revealLogs
-    case openInstallGuide
+    case refreshStatus
 
     var id: String { rawValue }
 
     var title: String {
         switch self {
-        case .refresh:
-            return "Refresh"
+        case .install:
+            return "Install OpenClaw CLI"
+        case .repair:
+            return "Run Repair"
+        case .start:
+            return "Start OpenClaw"
+        case .restart:
+            return "Restart OpenClaw"
         case .openDashboard:
             return "Open Dashboard"
-        case .restartGateway:
-            return "Restart Gateway"
-        case .installLaunchAgent:
-            return "Install Agent"
-        case .repairConfiguration:
-            return "Run Repair"
         case .revealLogs:
             return "Reveal Logs"
-        case .openInstallGuide:
-            return "Install Guide"
+        case .refreshStatus:
+            return "Refresh Status"
         }
     }
 
     var subtitle: String {
         switch self {
-        case .refresh:
-            return "Probe the gateway again."
+        case .install:
+            return "Install or reuse the official OpenClaw CLI."
+        case .repair:
+            return "Run `openclaw doctor --repair --non-interactive`."
+        case .start:
+            return "Kick the current launchd job to bring the local runtime up."
+        case .restart:
+            return "Restart the local OpenClaw runtime through launchd."
         case .openDashboard:
             return "Open the dashboard surface in your browser."
-        case .restartGateway:
-            return "Kick the launch agent without a terminal."
-        case .installLaunchAgent:
-            return "Install or refresh the per-user LaunchAgent."
-        case .repairConfiguration:
-            return "Run `openclaw doctor --repair`."
         case .revealLogs:
             return "Open the latest local OpenClaw logs."
-        case .openInstallGuide:
-            return "Open the official setup guide."
+        case .refreshStatus:
+            return "Probe the local runtime again and refresh the dashboard surface."
         }
     }
 
     var systemImage: String {
         switch self {
-        case .refresh:
-            return "arrow.clockwise"
+        case .install:
+            return "square.and.arrow.down"
+        case .repair:
+            return "wrench.and.screwdriver"
+        case .start:
+            return "play.circle"
+        case .restart:
+            return "arrow.clockwise.circle"
         case .openDashboard:
             return "safari"
-        case .restartGateway:
-            return "bolt.badge.clock"
-        case .installLaunchAgent:
-            return "square.and.arrow.down"
-        case .repairConfiguration:
-            return "wrench.and.screwdriver"
         case .revealLogs:
             return "text.page"
-        case .openInstallGuide:
-            return "book.closed"
+        case .refreshStatus:
+            return "arrow.clockwise"
         }
+    }
+
+    var allowsConcurrentUse: Bool {
+        switch self {
+        case .openDashboard, .revealLogs:
+            return true
+        case .install, .repair, .start, .restart, .refreshStatus:
+            return false
+        }
+    }
+}
+
+struct RuntimeActionModel: Equatable, Sendable {
+    let actions: [RuntimeAction]
+
+    var overlayActions: [RuntimeAction] {
+        Array(actions.prefix(2))
+    }
+}
+
+struct RuntimeActionResolver {
+    func resolve(snapshot: GatewaySnapshot, cliInstalled: Bool) -> RuntimeActionModel {
+        var actions: [RuntimeAction] = [.refreshStatus]
+
+        switch snapshot.level {
+        case .healthy:
+            actions.append(contentsOf: [.openDashboard, .revealLogs, .restart])
+        case .recovering:
+            actions.append(contentsOf: [.openDashboard, .restart, .revealLogs])
+        case .degraded:
+            actions.append(contentsOf: [.repair, .restart, .openDashboard, .revealLogs])
+        case .offline:
+            actions.append(contentsOf: [.start, .repair, .revealLogs])
+        case .missingCLI:
+            if !cliInstalled {
+                actions.insert(.install, at: 0)
+            }
+            actions.append(.revealLogs)
+        }
+
+        return RuntimeActionModel(actions: deduplicated(actions))
+    }
+
+    private func deduplicated(_ actions: [RuntimeAction]) -> [RuntimeAction] {
+        var seen: Set<RuntimeAction> = []
+        return actions.filter { seen.insert($0).inserted }
     }
 }
 
@@ -149,7 +195,6 @@ struct GatewaySnapshot: Equatable, Sendable {
     var metrics: [StatusMetric]
     var rawProbe: String
     var logSummary: LogSummary?
-    var suggestedActions: [RecoveryAction]
 
     static func placeholder(configuration: ClawNestConfiguration) -> GatewaySnapshot {
         GatewaySnapshot(
@@ -164,8 +209,7 @@ struct GatewaySnapshot: Equatable, Sendable {
                 StatusMetric("LaunchAgent", value: configuration.launchAgentLabel)
             ],
             rawProbe: "",
-            logSummary: nil,
-            suggestedActions: [.refresh, .openDashboard]
+            logSummary: nil
         )
     }
 }
@@ -214,7 +258,7 @@ struct MonitorResult: Sendable {
 enum MonitorTrigger: Sendable {
     case manual
     case automaticPoll
-    case postAction(RecoveryAction)
+    case postAction(RuntimeAction)
 
     var allowsAutoRecovery: Bool {
         switch self {

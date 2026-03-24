@@ -52,8 +52,8 @@ actor GatewaySupervisor {
         }
 
         if trigger.allowsAutoRecovery && shouldAutoRecover(snapshot: snapshot) {
-            let restartResult = await execute(action: .restartGateway)
-            entries.append(diagnosticForAction(.restartGateway, result: restartResult, automatic: true))
+            let restartResult = await execute(action: .restart)
+            entries.append(diagnosticForAction(.restart, result: restartResult, automatic: true))
             lastAutoRecoveryAt = .now
 
             let postRestartProbe = await runner.run(command: configuration.openClawCommand, arguments: ["health", "--json"])
@@ -63,7 +63,7 @@ actor GatewaySupervisor {
                 lastHealthy: lastHealthyAt,
                 logSummary: logInspector.latestSummary()
             )
-            entries.append(diagnosticForProbe(result: postRestartProbe, snapshot: snapshot, trigger: .postAction(.restartGateway)))
+            entries.append(diagnosticForProbe(result: postRestartProbe, snapshot: snapshot, trigger: .postAction(.restart)))
 
             if snapshot.level == .healthy {
                 lastHealthyAt = snapshot.lastCheck
@@ -88,11 +88,11 @@ actor GatewaySupervisor {
         return MonitorResult(snapshot: snapshot, entries: entries)
     }
 
-    func run(action: RecoveryAction) async -> MonitorResult {
+    func run(action: RuntimeAction) async -> MonitorResult {
         switch action {
-        case .refresh, .openDashboard, .revealLogs, .openInstallGuide:
+        case .refreshStatus, .openDashboard, .revealLogs, .install:
             return await refresh(trigger: .manual)
-        case .restartGateway, .installLaunchAgent, .repairConfiguration:
+        case .start, .restart, .repair:
             let result = await execute(action: action)
             let entry = diagnosticForAction(action, result: result, automatic: false)
             let refreshed = await refresh(trigger: .postAction(action))
@@ -112,16 +112,14 @@ actor GatewaySupervisor {
         return true
     }
 
-    private func execute(action: RecoveryAction) async -> CommandResult {
+    private func execute(action: RuntimeAction) async -> CommandResult {
         switch action {
-        case .restartGateway:
+        case .start, .restart:
             let label = "gui/\(getuid())/\(configuration.launchAgentLabel)"
             return await runner.run(command: "launchctl", arguments: ["kickstart", "-k", label])
-        case .installLaunchAgent:
-            return await runner.run(command: configuration.openClawCommand, arguments: ["gateway", "install"])
-        case .repairConfiguration:
+        case .repair:
             return await runner.run(command: configuration.openClawCommand, arguments: ["doctor", "--repair", "--non-interactive"])
-        case .refresh, .openDashboard, .revealLogs, .openInstallGuide:
+        case .install, .openDashboard, .revealLogs, .refreshStatus:
             return await runner.run(command: "true", arguments: [])
         }
     }
@@ -161,7 +159,7 @@ actor GatewaySupervisor {
     }
 
     private func diagnosticForAction(
-        _ action: RecoveryAction,
+        _ action: RuntimeAction,
         result: CommandResult,
         automatic: Bool
     ) -> DiagnosticEntry {

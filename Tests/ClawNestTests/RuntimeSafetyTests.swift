@@ -49,7 +49,10 @@ final class RuntimeSafetyTests: XCTestCase {
         try await Task.sleep(for: .milliseconds(250))
 
         let commands = await runner.recordedCommands()
-        XCTAssertEqual(commands, ["openclaw health --json"])
+        XCTAssertEqual(commands, [
+            "openclaw health --json",
+            "/bin/zsh -lc command -v 'openclaw'"
+        ])
         withExtendedLifetime(model) {}
     }
 }

@@ -136,11 +136,11 @@ struct ControlPanelView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 18) {
             PanelHeaderView(
-                title: localized("Claw Actions", "Claw 动作", language: language),
-                subtitle: localized("The current runtime stays recoverable even when the dashboard surface is having a bad day.", "即使 dashboard 状态不好，当前 runtime 仍然可以在这里恢复。", language: language)
+                title: localized("Runtime Actions", "运行时动作", language: language),
+                subtitle: localized("Every surface uses the same action model, so only actions that really make sense for the current local runtime are shown.", "所有界面都使用同一套动作模型，因此这里只会显示当前本地 runtime 真实可执行的动作。", language: language)
             )
 
-            ForEach(model.snapshot.suggestedActions) { action in
+            ForEach(model.runtimeActions) { action in
                 Button {
                     model.perform(action)
                 } label: {
@@ -165,7 +165,7 @@ struct ControlPanelView: View {
                     .background(AppShellPalette.subtleFill, in: RoundedRectangle(cornerRadius: ClawNestLayout.Radius.medium, style: .continuous))
                 }
                 .buttonStyle(.plain)
-                .disabled(model.isBusy && action != .openDashboard && action != .revealLogs && action != .openInstallGuide)
+                .disabled(!model.isActionEnabled(action))
             }
         }
         .padding(ClawNestLayout.Spacing.large + 2)
@@ -253,49 +253,61 @@ struct DashboardPanelView: View {
 
     @ViewBuilder
     private var overlayView: some View {
+        overlayBackground
+            .overlay {
+                overlayContent
+            }
+    }
+
+    private var overlayBackground: some View {
         RoundedRectangle(cornerRadius: ClawNestLayout.Radius.large, style: .continuous)
             .fill(Color.white.opacity(0.84))
             .overlay(
                 RoundedRectangle(cornerRadius: ClawNestLayout.Radius.large, style: .continuous)
                     .stroke(AppShellPalette.border, lineWidth: 1)
             )
-            .overlay {
-                VStack(spacing: 14) {
-                    Image(systemName: overlayIcon)
-                        .font(.system(size: ClawNestLayout.Typography.overlayIcon, weight: .semibold))
-                        .foregroundStyle(AppShellPalette.textPrimary)
+    }
 
-                    Text(overlayTitle)
-                        .font(.title3.bold())
-                        .foregroundStyle(AppShellPalette.textPrimary)
+    private var overlayContent: some View {
+        VStack(spacing: 14) {
+            Image(systemName: overlayIcon)
+                .font(.system(size: ClawNestLayout.Typography.overlayIcon, weight: .semibold))
+                .foregroundStyle(AppShellPalette.textPrimary)
 
-                    Text(overlayMessage)
-                        .font(.body)
-                        .foregroundStyle(AppShellPalette.textSecondary)
-                        .multilineTextAlignment(.center)
-                        .frame(maxWidth: ClawNestLayout.Size.overlayTextWidth)
+            Text(overlayTitle)
+                .font(.title3.bold())
+                .foregroundStyle(AppShellPalette.textPrimary)
 
-                    FlowLayout(spacing: 12, rowSpacing: 12) {
-                        Button(localized("Reload Surface", "重新加载界面", language: language)) {
-                            model.reloadDashboard()
-                        }
-                        .buttonStyle(.borderedProminent)
+            Text(overlayMessage)
+                .font(.body)
+                .foregroundStyle(AppShellPalette.textSecondary)
+                .multilineTextAlignment(.center)
+                .frame(maxWidth: ClawNestLayout.Size.overlayTextWidth)
 
-                        if model.snapshot.level != .missingCLI {
-                            Button(localized("Restart Gateway", "重启网关", language: language)) {
-                                model.perform(.restartGateway)
-                            }
-                            .buttonStyle(.bordered)
-                        } else {
-                            Button(localized("Open Install Guide", "打开安装指南", language: language)) {
-                                model.perform(.openInstallGuide)
-                            }
-                            .buttonStyle(.bordered)
-                        }
-                    }
+            FlowLayout(spacing: 12, rowSpacing: 12) {
+                ForEach(Array(model.overlayRuntimeActions.enumerated()), id: \.element.id) { index, action in
+                    overlayActionButton(action, isPrimary: index == 0)
                 }
-                .padding(ClawNestLayout.Spacing.xLarge)
             }
+        }
+        .padding(ClawNestLayout.Spacing.xLarge)
+    }
+
+    @ViewBuilder
+    private func overlayActionButton(_ action: RuntimeAction, isPrimary: Bool) -> some View {
+        if isPrimary {
+            Button(action.title(in: language)) {
+                model.perform(action)
+            }
+            .buttonStyle(BorderedProminentButtonStyle())
+            .disabled(!model.isActionEnabled(action))
+        } else {
+            Button(action.title(in: language)) {
+                model.perform(action)
+            }
+            .buttonStyle(BorderedButtonStyle())
+            .disabled(!model.isActionEnabled(action))
+        }
     }
 
     private var overlayIcon: String {
@@ -334,11 +346,11 @@ struct ActivityFeedView: View {
         VStack(alignment: .leading, spacing: 18) {
             PanelHeaderView(
                 title: localized("Caretaker Notes", "守护者笔记", language: language),
-                subtitle: localized("The same diagnostics stream, softened into readable updates.", "同一条诊断流，用更可读的方式呈现。", language: language)
+                subtitle: localized("A readable timeline of the actual diagnostics stream for this local runtime.", "把这个本地 runtime 的真实诊断流整理成可读时间线。", language: language)
             )
 
             if entries.isEmpty {
-                Text(localized("No moments yet.", "还没有动态。", language: language))
+                Text(localized("No diagnostics yet.", "还没有诊断记录。", language: language))
                     .font(.subheadline)
                     .foregroundStyle(AppShellPalette.textTertiary)
             } else {
@@ -401,7 +413,7 @@ struct LatestLogView: View {
         VStack(alignment: .leading, spacing: 18) {
             PanelHeaderView(
                 title: localized("Latest Log + Raw Probe", "最新日志与原始探测", language: language),
-                subtitle: localized("The honest, unsoftened technical layer is still one glance away.", "最原始、最技术化的信息依然随时可看。", language: language)
+                subtitle: localized("Raw logs and probe output stay visible so the workbench never hides the underlying runtime state.", "原始日志和探测结果始终可见，工作台不会把底层 runtime 状态藏起来。", language: language)
             )
 
             VStack(alignment: .leading, spacing: 10) {
@@ -463,7 +475,7 @@ struct ConfigurationEditorView: View {
         VStack(alignment: .leading, spacing: 18) {
             PanelHeaderView(
                 title: localized("Current Runtime Settings", "当前运行时设置", language: language),
-                subtitle: localized("The technical knobs stay editable, but they now live behind the active Claw instead of taking over the whole app.", "技术参数依然可编辑，只是现在放到了活动 Claw 后面，而不是占满整个应用。", language: language)
+                subtitle: localized("These settings only affect the current local OpenClaw runtime that this workbench is attached to.", "这些设置只影响当前工作台连接的本地 OpenClaw runtime。", language: language)
             )
 
             Group {
