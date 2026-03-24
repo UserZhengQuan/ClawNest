@@ -71,6 +71,10 @@ Or open the package in Xcode and run the `ClawNest` executable target.
 That script builds a release binary, wraps it in `dist/ClawNest.app`, applies ad-hoc signing for local use, and writes `dist/ClawNest.zip` for easy sharing.
 It also syncs both files to `~/Downloads` so the latest test build is easy to find.
 
+## License
+
+ClawNest is released under the MIT License. See [LICENSE](LICENSE).
+
 ## Default assumptions
 
 - OpenClaw CLI is available on `PATH` as `openclaw`
