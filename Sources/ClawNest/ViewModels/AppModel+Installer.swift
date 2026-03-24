@@ -52,7 +52,7 @@ extension AppModel {
                         command: nil
                     )
                 )
-                saveConfiguration(result.suggestedConfiguration)
+                saveConfiguration(updatedConfiguration(afterInstalling: result.installedCommand))
                 await refreshInstallSnapshot()
             } catch {
                 installStatusMessage = error.localizedDescription
@@ -67,6 +67,22 @@ extension AppModel {
                 )
             }
         }
+    }
+
+    private func updatedConfiguration(afterInstalling installedCommand: String) -> ClawNestConfiguration {
+        var updated = configuration
+        updated.openClawCommand = installedCommand
+
+        if configurationLooksClawNestManaged(updated) {
+            updated.dashboardURLString = ClawNestConfiguration.standard.dashboardURLString
+            updated.launchAgentLabel = ClawNestConfiguration.standard.launchAgentLabel
+        }
+
+        return updated
+    }
+
+    private func configurationLooksClawNestManaged(_ configuration: ClawNestConfiguration) -> Bool {
+        configuration.launchAgentLabel.hasPrefix("ai.clawnest.openclaw.")
     }
 
     func installDeveloperTools() {

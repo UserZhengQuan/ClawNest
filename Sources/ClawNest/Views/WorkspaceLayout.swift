@@ -114,7 +114,7 @@ struct WorkspaceLayoutMetrics {
     }
 
     var sidebarWidth: CGFloat {
-        clamped(containerSize.width * 0.18, min: containerSize.width < 900 ? 190 : (containerSize.width < 1100 ? 220 : 236), max: 308)
+        clamped(containerSize.width * 0.12, min: containerSize.width < 900 ? 124 : (containerSize.width < 1100 ? 138 : 150), max: 170)
     }
 
     var detailCanvasWidth: CGFloat {
