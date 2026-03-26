@@ -7,6 +7,7 @@ APP_NAME="ClawNest"
 BUILD_DIR="$ROOT/.build/release"
 APP_DIR="$ROOT/dist/$APP_NAME.app"
 ZIP_PATH="$ROOT/dist/$APP_NAME.zip"
+SKIP_ZIP="${SKIP_ZIP:-0}"
 DOWNLOADS_DIR="$HOME/Downloads"
 DOWNLOADS_APP_DIR="$DOWNLOADS_DIR/$APP_NAME.app"
 DOWNLOADS_ZIP_PATH="$DOWNLOADS_DIR/$APP_NAME.zip"
@@ -35,20 +36,28 @@ xattr -cr "$APP_DIR"
 echo "Applying ad-hoc signature..."
 codesign --force --deep --sign - "$APP_DIR"
 
-echo "Creating zip archive..."
-ditto -c -k --keepParent "$APP_DIR" "$ZIP_PATH"
+if [[ "$SKIP_ZIP" != "1" ]]; then
+  echo "Creating zip archive..."
+  ditto -c -k --keepParent "$APP_DIR" "$ZIP_PATH"
+fi
 
 echo "Syncing packaged artifacts to Downloads..."
 mkdir -p "$DOWNLOADS_DIR"
 ditto "$APP_DIR" "$DOWNLOADS_APP_DIR"
-cp -f "$ZIP_PATH" "$DOWNLOADS_ZIP_PATH"
+
+if [[ "$SKIP_ZIP" != "1" ]]; then
+  cp -f "$ZIP_PATH" "$DOWNLOADS_ZIP_PATH"
+fi
 
 echo
 echo "Packaged app:"
 echo "  $APP_DIR"
-echo "Zip archive:"
-echo "  $ZIP_PATH"
 echo "Downloads app:"
 echo "  $DOWNLOADS_APP_DIR"
-echo "Downloads zip:"
-echo "  $DOWNLOADS_ZIP_PATH"
+
+if [[ "$SKIP_ZIP" != "1" ]]; then
+  echo "Zip archive:"
+  echo "  $ZIP_PATH"
+  echo "Downloads zip:"
+  echo "  $DOWNLOADS_ZIP_PATH"
+fi
