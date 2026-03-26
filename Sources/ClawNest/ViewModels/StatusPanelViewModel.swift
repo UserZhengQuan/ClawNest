@@ -2,13 +2,14 @@ import AppKit
 import Foundation
 
 @MainActor
-protocol PathActionHandling {
+protocol LocalSystemActionHandling {
     func copy(_ url: URL)
     func reveal(_ url: URL)
+    func open(_ url: URL) -> Bool
 }
 
 @MainActor
-struct DefaultPathActionHandler: PathActionHandling {
+struct DefaultLocalSystemActionHandler: LocalSystemActionHandling {
     func copy(_ url: URL) {
         let pasteboard = NSPasteboard.general
         pasteboard.clearContents()
@@ -18,6 +19,10 @@ struct DefaultPathActionHandler: PathActionHandling {
     func reveal(_ url: URL) {
         guard let revealURL = closestExistingURL(to: url) else { return }
         NSWorkspace.shared.activateFileViewerSelecting([revealURL])
+    }
+
+    func open(_ url: URL) -> Bool {
+        NSWorkspace.shared.open(url)
     }
 
     private func closestExistingURL(to url: URL) -> URL? {
@@ -40,19 +45,24 @@ struct DefaultPathActionHandler: PathActionHandling {
 final class StatusPanelViewModel: ObservableObject {
     @Published private(set) var snapshot: OpenClawStatusSnapshot
     @Published private(set) var isRefreshing = false
+    @Published private(set) var commandOutput: CommandExecutionRecord?
+    @Published private(set) var actionNote: String?
 
-    private let service: any OpenClawStatusServing
-    private let pathActions: any PathActionHandling
+    private let statusService: any OpenClawStatusServing
+    private let actionService: any OpenClawControlActionServing
+    private let systemActions: any LocalSystemActionHandling
     private var hasLoaded = false
 
     init(
-        service: any OpenClawStatusServing = OpenClawStatusService(),
-        pathActions: any PathActionHandling = DefaultPathActionHandler()
+        statusService: any OpenClawStatusServing = OpenClawStatusService(),
+        actionService: any OpenClawControlActionServing = OpenClawControlActionService(),
+        systemActions: any LocalSystemActionHandling = DefaultLocalSystemActionHandler()
     ) {
         let defaults = OpenClawDefaults.standard()
         self.snapshot = .placeholder(defaults: defaults)
-        self.service = service
-        self.pathActions = pathActions
+        self.statusService = statusService
+        self.actionService = actionService
+        self.systemActions = systemActions
     }
 
     var lastCheckedText: String {
@@ -61,6 +71,10 @@ final class StatusPanelViewModel: ObservableObject {
         }
 
         return lastCheckedAt.formatted(date: .abbreviated, time: .standard)
+    }
+
+    var isCommandRunning: Bool {
+        commandOutput?.status == .running
     }
 
     func loadIfNeeded() async {
@@ -76,16 +90,78 @@ final class StatusPanelViewModel: ObservableObject {
     }
 
     func copy(_ url: URL) {
-        pathActions.copy(url)
+        systemActions.copy(url)
     }
 
     func reveal(_ url: URL) {
-        pathActions.reveal(url)
+        systemActions.reveal(url)
+    }
+
+    func perform(_ action: OpenClawControlAction) {
+        switch action {
+        case .refresh:
+            actionNote = nil
+            refreshNow()
+        case .openChat:
+            openChat()
+        case .start, .restart, .stop, .repair:
+            guard !isCommandRunning else { return }
+            actionNote = nil
+            Task {
+                await runCommandAction(action)
+            }
+        }
+    }
+
+    func commandPreview(for action: OpenClawControlAction) -> String? {
+        actionService.descriptor(for: action)?.renderedCommand
+    }
+
+    func isRunning(action: OpenClawControlAction) -> Bool {
+        commandOutput?.action == action && commandOutput?.status == .running
     }
 
     private func refresh() async {
         isRefreshing = true
-        snapshot = await service.refresh()
+        snapshot = await statusService.refresh()
         isRefreshing = false
+    }
+
+    private func openChat() {
+        let gatewayURL = snapshot.gateway.url
+        let didOpen = systemActions.open(gatewayURL)
+
+        if !didOpen {
+            actionNote = "Could not open the default gateway URL."
+            return
+        }
+
+        if snapshot.runtimeStatus != .running {
+            actionNote = "OpenClaw is not confirmed running. Opening the default gateway URL anyway."
+        } else {
+            actionNote = nil
+        }
+    }
+
+    private func runCommandAction(_ action: OpenClawControlAction) async {
+        guard let stream = actionService.execute(action) else { return }
+
+        for await event in stream {
+            switch event {
+            case let .started(command, startedAt):
+                commandOutput = .running(action: action, command: command, startedAt: startedAt)
+            case let .output(chunk):
+                guard let current = commandOutput,
+                      current.action == action,
+                      current.status == .running else {
+                    continue
+                }
+                commandOutput = current.appending(chunk)
+            case let .finished(result):
+                commandOutput = .finished(action: action, result: result)
+            }
+        }
+
+        await refresh()
     }
 }

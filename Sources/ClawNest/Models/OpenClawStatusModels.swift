@@ -128,9 +128,9 @@ struct OpenClawDefaults: Equatable, Sendable {
             openClawCommand: "openclaw",
             gatewayURL: URL(string: "http://127.0.0.1:18789/")!,
             paths: [
-                OpenClawPathItem(title: "OpenClaw root", url: rootURL),
-                OpenClawPathItem(title: "Config", url: rootURL.appendingPathComponent("openclaw.json", isDirectory: false)),
-                OpenClawPathItem(title: "Logs", url: URL(fileURLWithPath: "/tmp/openclaw", isDirectory: true))
+                OpenClawPathItem(title: "OpenClaw root path", url: rootURL),
+                OpenClawPathItem(title: "Config path", url: rootURL.appendingPathComponent("openclaw.json", isDirectory: false)),
+                OpenClawPathItem(title: "Logs path", url: rootURL.appendingPathComponent("logs", isDirectory: true))
             ]
         )
     }

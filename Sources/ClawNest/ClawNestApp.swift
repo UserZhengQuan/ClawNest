@@ -9,6 +9,6 @@ struct ClawNestApp: App {
         Window("ClawNest", id: "main") {
             ContentView(viewModel: viewModel)
         }
-        .defaultSize(width: 720, height: 520)
+        .defaultSize(width: 760, height: 740)
     }
 }

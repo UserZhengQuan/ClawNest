@@ -33,8 +33,10 @@ let package = Package(
             ],
             sources: [
                 "ClawNestApp.swift",
+                "Models/OpenClawControlModels.swift",
                 "Models/OpenClawStatusModels.swift",
                 "Services/CommandRunner.swift",
+                "Services/OpenClawControlActionService.swift",
                 "Services/OpenClawStatusService.swift",
                 "ViewModels/StatusPanelViewModel.swift",
                 "Views/ContentView.swift"
@@ -52,6 +54,7 @@ let package = Package(
                 "RuntimeSafetyTests.swift"
             ],
             sources: [
+                "OpenClawControlActionServiceTests.swift",
                 "OpenClawStatusServiceTests.swift"
             ]
         )

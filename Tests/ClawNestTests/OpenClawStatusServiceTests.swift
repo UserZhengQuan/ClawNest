@@ -12,7 +12,7 @@ final class OpenClawStatusServiceTests: XCTestCase {
         XCTAssertEqual(defaults.paths.map(\.url.path), [
             "/Users/tester/.openclaw",
             "/Users/tester/.openclaw/openclaw.json",
-            "/tmp/openclaw"
+            "/Users/tester/.openclaw/logs"
         ])
     }
 

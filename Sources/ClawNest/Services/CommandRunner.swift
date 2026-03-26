@@ -17,16 +17,42 @@ struct CommandResult: Sendable {
     let stdout: String
     let stderr: String
     let launchError: String?
+    let startedAt: Date
+    let finishedAt: Date
+
+    init(
+        command: String,
+        arguments: [String],
+        exitCode: Int32,
+        stdout: String,
+        stderr: String,
+        launchError: String?,
+        startedAt: Date = .now,
+        finishedAt: Date? = nil
+    ) {
+        self.command = command
+        self.arguments = arguments
+        self.exitCode = exitCode
+        self.stdout = stdout
+        self.stderr = stderr
+        self.launchError = launchError
+        self.startedAt = startedAt
+        self.finishedAt = finishedAt ?? startedAt
+    }
 
     var renderedCommand: String {
         ([command] + arguments).joined(separator: " ")
     }
 
     var combinedOutput: String {
-        [stdout, stderr]
+        [stdout, stderr, launchError ?? ""]
             .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
             .filter { !$0.isEmpty }
             .joined(separator: "\n")
+    }
+
+    var duration: TimeInterval {
+        finishedAt.timeIntervalSince(startedAt)
     }
 }
 
@@ -84,6 +110,7 @@ final class ProcessCommandRunner: CommandRunning, @unchecked Sendable {
             let stderrPipe = Pipe()
             let stdoutAccumulator = DataAccumulator()
             let stderrAccumulator = DataAccumulator()
+            let startedAt = Date()
 
             stdoutPipe.fileHandleForReading.readabilityHandler = { handle in
                 let chunk = handle.availableData
@@ -134,7 +161,9 @@ final class ProcessCommandRunner: CommandRunning, @unchecked Sendable {
                     exitCode: process.terminationStatus,
                     stdout: stdoutAccumulator.stringValue,
                     stderr: stderrAccumulator.stringValue,
-                    launchError: nil
+                    launchError: nil,
+                    startedAt: startedAt,
+                    finishedAt: Date()
                 ))
             }
 
@@ -150,7 +179,9 @@ final class ProcessCommandRunner: CommandRunning, @unchecked Sendable {
                     exitCode: -1,
                     stdout: "",
                     stderr: "",
-                    launchError: error.localizedDescription
+                    launchError: error.localizedDescription,
+                    startedAt: startedAt,
+                    finishedAt: Date()
                 ))
             }
         }
