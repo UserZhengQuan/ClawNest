@@ -16,24 +16,29 @@ struct GatewayHealthCheckResult: Equatable, Sendable {
 struct OpenClawStatusService: OpenClawStatusServing {
     private let defaults: OpenClawDefaults
     private let runner: CommandRunning
+    private let commandResolver: any CommandResolving
     private let gatewayChecker: any GatewayHealthChecking
     private let interpreter: OpenClawStatusInterpreter
 
     init(
         defaults: OpenClawDefaults = .standard(),
         runner: CommandRunning = ProcessCommandRunner(),
+        commandResolver: (any CommandResolving)? = nil,
         gatewayChecker: any GatewayHealthChecking = URLSessionGatewayHealthChecker(),
         interpreter: OpenClawStatusInterpreter = OpenClawStatusInterpreter()
     ) {
         self.defaults = defaults
         self.runner = runner
+        self.commandResolver = commandResolver ?? ShellCommandResolver(runner: runner)
         self.gatewayChecker = gatewayChecker
         self.interpreter = interpreter
     }
 
     func refresh() async -> OpenClawStatusSnapshot {
+        let openClawCommand = await commandResolver.resolve(defaults.openClawCommand) ?? defaults.openClawCommand
+
         async let probeResult = runner.run(
-            command: defaults.openClawCommand,
+            command: openClawCommand,
             arguments: ["health", "--json"]
         )
         async let gatewayCheck = gatewayChecker.check(url: defaults.gatewayURL)

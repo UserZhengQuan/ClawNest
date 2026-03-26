@@ -1,6 +1,12 @@
 import Foundation
 import SwiftUI
 
+enum MenuBarIndicatorState: Equatable, Sendable {
+    case neutral
+    case healthy
+    case unhealthy
+}
+
 enum OpenClawControlAction: String, CaseIterable, Identifiable, Sendable {
     case refresh
     case openChat

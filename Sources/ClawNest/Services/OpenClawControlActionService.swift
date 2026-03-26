@@ -23,13 +23,16 @@ protocol OpenClawControlActionServing: Sendable {
 struct OpenClawControlActionService: OpenClawControlActionServing {
     private let defaults: OpenClawDefaults
     private let runner: CommandRunning
+    private let commandResolver: any CommandResolving
 
     init(
         defaults: OpenClawDefaults = .standard(),
-        runner: CommandRunning = ProcessCommandRunner()
+        runner: CommandRunning = ProcessCommandRunner(),
+        commandResolver: (any CommandResolving)? = nil
     ) {
         self.defaults = defaults
         self.runner = runner
+        self.commandResolver = commandResolver ?? ShellCommandResolver(runner: runner)
     }
 
     func descriptor(for action: OpenClawControlAction) -> OpenClawCommandDescriptor? {
@@ -51,11 +54,16 @@ struct OpenClawControlActionService: OpenClawControlActionServing {
         guard let descriptor = descriptor(for: action) else { return nil }
 
         return AsyncStream { continuation in
-            continuation.yield(.started(command: descriptor.renderedCommand, startedAt: .now))
-
             Task {
+                let resolvedCommand = await commandResolver.resolve(descriptor.command) ?? descriptor.command
+                let startedAt = Date()
+                continuation.yield(.started(
+                    command: ([resolvedCommand] + descriptor.arguments).joined(separator: " "),
+                    startedAt: startedAt
+                ))
+
                 let result = await runner.run(
-                    command: descriptor.command,
+                    command: resolvedCommand,
                     arguments: descriptor.arguments,
                     outputHandler: { chunk in
                         continuation.yield(.output(chunk))

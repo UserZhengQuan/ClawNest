@@ -1,14 +1,36 @@
+import AppKit
 import SwiftUI
+
+final class ClawNestApplicationDelegate: NSObject, NSApplicationDelegate {
+    func applicationDidFinishLaunching(_ notification: Notification) {
+        NSApplication.shared.setActivationPolicy(.accessory)
+    }
+}
 
 @MainActor
 @main
 struct ClawNestApp: App {
-    @StateObject private var viewModel = StatusPanelViewModel()
+    @NSApplicationDelegateAdaptor(ClawNestApplicationDelegate.self) private var appDelegate
+    @StateObject private var viewModel: StatusPanelViewModel
+    private let outputPanelController = CommandOutputPanelController()
+
+    init() {
+        let viewModel = StatusPanelViewModel()
+        _viewModel = StateObject(wrappedValue: viewModel)
+
+        Task {
+            await viewModel.loadIfNeeded()
+        }
+    }
 
     var body: some Scene {
-        Window("ClawNest", id: "main") {
-            ContentView(viewModel: viewModel)
+        MenuBarExtra {
+            MenuBarControlView(
+                viewModel: viewModel,
+                outputPanelController: outputPanelController
+            )
+        } label: {
+            MenuBarStatusIconView(state: viewModel.menuBarIndicatorState)
         }
-        .defaultSize(width: 760, height: 740)
     }
 }

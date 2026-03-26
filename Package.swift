@@ -36,10 +36,13 @@ let package = Package(
                 "Models/OpenClawControlModels.swift",
                 "Models/OpenClawStatusModels.swift",
                 "Services/CommandRunner.swift",
+                "Services/CommandOutputPanelController.swift",
                 "Services/OpenClawControlActionService.swift",
                 "Services/OpenClawStatusService.swift",
+                "Services/ShellCommandResolver.swift",
                 "ViewModels/StatusPanelViewModel.swift",
-                "Views/ContentView.swift"
+                "Views/CommandOutputView.swift",
+                "Views/MenuBarControlView.swift"
             ]
         ),
         .testTarget(
@@ -55,6 +58,7 @@ let package = Package(
             ],
             sources: [
                 "OpenClawControlActionServiceTests.swift",
+                "ShellCommandResolverTests.swift",
                 "OpenClawStatusServiceTests.swift"
             ]
         )

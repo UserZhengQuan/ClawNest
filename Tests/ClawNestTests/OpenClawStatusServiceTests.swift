@@ -16,6 +16,12 @@ final class OpenClawStatusServiceTests: XCTestCase {
         ])
     }
 
+    func testPlaceholderSnapshotUsesNeutralMenuBarIndicator() {
+        let snapshot = OpenClawStatusSnapshot.placeholder(defaults: defaults)
+
+        XCTAssertEqual(snapshot.menuBarIndicatorState, .neutral)
+    }
+
     func testInterpreterMarksRunningWhenProbeReportsHealthy() {
         let snapshot = interpreter.makeSnapshot(
             defaults: defaults,
@@ -37,6 +43,7 @@ final class OpenClawStatusServiceTests: XCTestCase {
         XCTAssertEqual(snapshot.runtimeStatus, .running)
         XCTAssertEqual(snapshot.gateway.health, .healthy)
         XCTAssertEqual(snapshot.lastCheckedAt, Date(timeIntervalSince1970: 100))
+        XCTAssertEqual(snapshot.menuBarIndicatorState, .healthy)
     }
 
     func testInterpreterMarksStoppedWhenCommandIsMissingAndGatewayIsDown() {

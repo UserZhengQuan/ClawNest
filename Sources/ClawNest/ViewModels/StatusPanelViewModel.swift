@@ -51,18 +51,26 @@ final class StatusPanelViewModel: ObservableObject {
     private let statusService: any OpenClawStatusServing
     private let actionService: any OpenClawControlActionServing
     private let systemActions: any LocalSystemActionHandling
+    private let pollIntervalSeconds: Double
     private var hasLoaded = false
+    private var pollTask: Task<Void, Never>?
 
     init(
         statusService: any OpenClawStatusServing = OpenClawStatusService(),
         actionService: any OpenClawControlActionServing = OpenClawControlActionService(),
-        systemActions: any LocalSystemActionHandling = DefaultLocalSystemActionHandler()
+        systemActions: any LocalSystemActionHandling = DefaultLocalSystemActionHandler(),
+        pollIntervalSeconds: Double = 45
     ) {
         let defaults = OpenClawDefaults.standard()
         self.snapshot = .placeholder(defaults: defaults)
         self.statusService = statusService
         self.actionService = actionService
         self.systemActions = systemActions
+        self.pollIntervalSeconds = pollIntervalSeconds
+    }
+
+    deinit {
+        pollTask?.cancel()
     }
 
     var lastCheckedText: String {
@@ -77,10 +85,19 @@ final class StatusPanelViewModel: ObservableObject {
         commandOutput?.status == .running
     }
 
+    var menuBarIndicatorState: MenuBarIndicatorState {
+        snapshot.menuBarIndicatorState
+    }
+
+    var rootPathText: String {
+        snapshot.rootPath?.path ?? OpenClawDefaults.standard().paths[0].url.path
+    }
+
     func loadIfNeeded() async {
         guard !hasLoaded else { return }
         hasLoaded = true
         await refresh()
+        startPolling()
     }
 
     func refreshNow() {
@@ -125,6 +142,26 @@ final class StatusPanelViewModel: ObservableObject {
         isRefreshing = true
         snapshot = await statusService.refresh()
         isRefreshing = false
+    }
+
+    private func startPolling() {
+        pollTask?.cancel()
+        let interval = max(15, pollIntervalSeconds)
+
+        pollTask = Task { [weak self] in
+            guard let self else { return }
+
+            while !Task.isCancelled {
+                try? await Task.sleep(for: .seconds(interval))
+                guard !Task.isCancelled else { return }
+
+                if self.isCommandRunning {
+                    continue
+                }
+
+                await self.refresh()
+            }
+        }
     }
 
     private func openChat() {

@@ -98,6 +98,23 @@ struct OpenClawStatusSnapshot: Equatable, Sendable {
     let gateway: GatewayStatusDetails
     let paths: [OpenClawPathItem]
 
+    var menuBarIndicatorState: MenuBarIndicatorState {
+        guard lastCheckedAt != nil else {
+            return .neutral
+        }
+
+        switch runtimeStatus {
+        case .running:
+            return .healthy
+        case .stopped, .unknown:
+            return .unhealthy
+        }
+    }
+
+    var rootPath: URL? {
+        paths.first?.url
+    }
+
     static func placeholder(defaults: OpenClawDefaults = .standard()) -> OpenClawStatusSnapshot {
         OpenClawStatusSnapshot(
             runtimeStatus: .unknown,
