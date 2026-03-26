@@ -17,6 +17,7 @@ struct OpenClawStatusService: OpenClawStatusServing {
     private let defaults: OpenClawDefaults
     private let runner: CommandRunning
     private let commandResolver: any CommandResolving
+    private let environmentProvider: any CommandEnvironmentProviding
     private let gatewayChecker: any GatewayHealthChecking
     private let interpreter: OpenClawStatusInterpreter
 
@@ -24,22 +25,26 @@ struct OpenClawStatusService: OpenClawStatusServing {
         defaults: OpenClawDefaults = .standard(),
         runner: CommandRunning = ProcessCommandRunner(),
         commandResolver: (any CommandResolving)? = nil,
+        environmentProvider: (any CommandEnvironmentProviding)? = nil,
         gatewayChecker: any GatewayHealthChecking = URLSessionGatewayHealthChecker(),
         interpreter: OpenClawStatusInterpreter = OpenClawStatusInterpreter()
     ) {
         self.defaults = defaults
         self.runner = runner
         self.commandResolver = commandResolver ?? ShellCommandResolver(runner: runner)
+        self.environmentProvider = environmentProvider ?? ShellCommandEnvironmentProvider(runner: runner)
         self.gatewayChecker = gatewayChecker
         self.interpreter = interpreter
     }
 
     func refresh() async -> OpenClawStatusSnapshot {
         let openClawCommand = await commandResolver.resolve(defaults.openClawCommand) ?? defaults.openClawCommand
+        let executionEnvironment = await environmentProvider.executionEnvironment()
 
         async let probeResult = runner.run(
             command: openClawCommand,
-            arguments: ["health", "--json"]
+            arguments: ["health", "--json"],
+            environment: executionEnvironment
         )
         async let gatewayCheck = gatewayChecker.check(url: defaults.gatewayURL)
 

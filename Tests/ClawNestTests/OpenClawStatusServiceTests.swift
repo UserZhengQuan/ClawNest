@@ -107,8 +107,86 @@ final class OpenClawStatusServiceTests: XCTestCase {
         XCTAssertEqual(snapshot.runtimeStatus, .unknown)
     }
 
-    private let interpreter = OpenClawStatusInterpreter()
+    func testRefreshUsesResolvedPathAndShellEnvironment() async {
+        let runner = StatusServiceRunner()
+        let service = OpenClawStatusService(
+            defaults: defaults,
+            runner: runner,
+            commandResolver: StatusStubCommandResolver(resolvedPath: "/opt/homebrew/bin/openclaw"),
+            environmentProvider: StatusStubEnvironmentProvider(environment: [
+                "PATH": "/opt/homebrew/bin:/usr/bin:/bin"
+            ]),
+            gatewayChecker: StubGatewayChecker()
+        )
+
+        let snapshot = await service.refresh()
+        let invocation = await runner.lastInvocation()
+
+        XCTAssertEqual(invocation?.command, "/opt/homebrew/bin/openclaw")
+        XCTAssertEqual(invocation?.arguments, ["health", "--json"])
+        XCTAssertEqual(invocation?.environment["PATH"], "/opt/homebrew/bin:/usr/bin:/bin")
+        XCTAssertEqual(snapshot.runtimeStatus, .running)
+    }
+
+private let interpreter = OpenClawStatusInterpreter()
     private let defaults = OpenClawDefaults.standard(
         homeDirectory: URL(fileURLWithPath: "/Users/tester", isDirectory: true)
     )
+}
+
+private struct StatusServiceInvocation {
+    let command: String
+    let arguments: [String]
+    let environment: [String: String]
+}
+
+private actor StatusServiceRunner: CommandRunning {
+    private var invocation: StatusServiceInvocation?
+
+    func run(
+        command: String,
+        arguments: [String],
+        environment: [String : String],
+        outputHandler: (@Sendable (CommandOutputChunk) -> Void)?
+    ) async -> CommandResult {
+        invocation = StatusServiceInvocation(
+            command: command,
+            arguments: arguments,
+            environment: environment
+        )
+        return CommandResult(
+            command: command,
+            arguments: arguments,
+            exitCode: 0,
+            stdout: #"{"ok":true,"status":"ready"}"#,
+            stderr: "",
+            launchError: nil
+        )
+    }
+
+    func lastInvocation() -> StatusServiceInvocation? {
+        invocation
+    }
+}
+
+private struct StubGatewayChecker: GatewayHealthChecking {
+    func check(url: URL) async -> GatewayHealthCheckResult {
+        GatewayHealthCheckResult(isReachable: true, health: .healthy)
+    }
+}
+
+private struct StatusStubCommandResolver: CommandResolving {
+    let resolvedPath: String?
+
+    func resolve(_ command: String) async -> String? {
+        resolvedPath
+    }
+}
+
+private struct StatusStubEnvironmentProvider: CommandEnvironmentProviding {
+    let environment: [String: String]
+
+    func executionEnvironment() async -> [String : String] {
+        environment
+    }
 }

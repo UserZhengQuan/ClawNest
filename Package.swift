@@ -40,6 +40,8 @@ let package = Package(
                 "Services/OpenClawControlActionService.swift",
                 "Services/OpenClawStatusService.swift",
                 "Services/ShellCommandResolver.swift",
+                "Services/ShellCommandEnvironmentProvider.swift",
+                "Services/UserShellProvider.swift",
                 "ViewModels/StatusPanelViewModel.swift",
                 "Views/CommandOutputView.swift",
                 "Views/MenuBarControlView.swift"
@@ -58,8 +60,10 @@ let package = Package(
             ],
             sources: [
                 "OpenClawControlActionServiceTests.swift",
+                "ShellCommandEnvironmentProviderTests.swift",
                 "ShellCommandResolverTests.swift",
-                "OpenClawStatusServiceTests.swift"
+                "OpenClawStatusServiceTests.swift",
+                "UserShellProviderTests.swift"
             ]
         )
     ],

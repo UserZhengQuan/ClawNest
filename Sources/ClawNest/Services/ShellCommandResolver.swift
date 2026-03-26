@@ -6,10 +6,15 @@ protocol CommandResolving: Sendable {
 
 actor ShellCommandResolver: CommandResolving {
     private let runner: CommandRunning
+    private let shellProvider: any UserShellProviding
     private var cache: [String: String?] = [:]
 
-    init(runner: CommandRunning = ProcessCommandRunner()) {
+    init(
+        runner: CommandRunning = ProcessCommandRunner(),
+        shellProvider: any UserShellProviding = SystemUserShellProvider()
+    ) {
         self.runner = runner
+        self.shellProvider = shellProvider
     }
 
     func resolve(_ command: String) async -> String? {
@@ -31,16 +36,21 @@ actor ShellCommandResolver: CommandResolving {
             return expandedPath
         }
 
-        for shellFlag in ["-lc", "-ic"] {
+        let shell = shellProvider.currentShell()
+        let request = ShellProbeScript.commandLookup(command)
+
+        for mode in ShellInvocationMode.allCases {
             let result = await runner.run(
-                command: "/bin/zsh",
-                arguments: [shellFlag, "command -v \(shellQuoted(command))"]
+                command: shell.executablePath,
+                arguments: shell.arguments(for: request.script, mode: mode)
             )
+            let path = ShellProbeScript.extractPayload(
+                from: result.stdout,
+                startMarker: request.startMarker,
+                endMarker: request.endMarker
+            ) ?? fallbackPath(from: result.stdout)
 
-            guard result.exitCode == 0 else { continue }
-            let path = result.stdout.trimmingCharacters(in: .whitespacesAndNewlines)
-
-            if path.contains("/") {
+            if let path, path.contains("/") {
                 return path
             }
         }
@@ -48,7 +58,12 @@ actor ShellCommandResolver: CommandResolving {
         return nil
     }
 
-    private func shellQuoted(_ value: String) -> String {
-        "'\(value.replacingOccurrences(of: "'", with: "'\\''"))'"
+    private func fallbackPath(from stdout: String) -> String? {
+        stdout
+            .split(whereSeparator: \.isNewline)
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .first { line in
+                !line.isEmpty && line.contains("/") && !line.contains(" ")
+            }
     }
 }

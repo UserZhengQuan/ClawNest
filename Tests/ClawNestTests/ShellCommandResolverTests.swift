@@ -3,20 +3,30 @@ import XCTest
 @testable import ClawNest
 
 final class ShellCommandResolverTests: XCTestCase {
-    func testResolveReturnsAbsolutePathFromLoginShellLookup() async {
+    func testResolveReturnsAbsolutePathFromInteractiveLoginShellLookup() async {
+        let shell = UserShell(executablePath: "/bin/zsh")
+        let request = ShellProbeScript.commandLookup("openclaw")
         let runner = ResolverCommandRunner(
             responses: [
-                ["/bin/zsh", "-lc", "command -v 'openclaw'"]: CommandResult(
+                ["/bin/zsh"] + shell.arguments(for: request.script, mode: .interactiveLogin): CommandResult(
                     command: "/bin/zsh",
-                    arguments: ["-lc", "command -v 'openclaw'"],
+                    arguments: shell.arguments(for: request.script, mode: .interactiveLogin),
                     exitCode: 0,
-                    stdout: "/opt/homebrew/bin/openclaw\n",
+                    stdout: """
+                    shell noise
+                    \(request.startMarker)
+                    /opt/homebrew/bin/openclaw
+                    \(request.endMarker)
+                    """,
                     stderr: "",
                     launchError: nil
                 )
             ]
         )
-        let resolver = ShellCommandResolver(runner: runner)
+        let resolver = ShellCommandResolver(
+            runner: runner,
+            shellProvider: StubUserShellProvider(shell: shell)
+        )
 
         let resolved = await resolver.resolve("openclaw")
 
@@ -24,27 +34,44 @@ final class ShellCommandResolverTests: XCTestCase {
     }
 
     func testResolveFallsBackToInteractiveShellLookup() async {
+        let shell = UserShell(executablePath: "/bin/zsh")
+        let request = ShellProbeScript.commandLookup("openclaw")
         let runner = ResolverCommandRunner(
             responses: [
-                ["/bin/zsh", "-lc", "command -v 'openclaw'"]: CommandResult(
+                ["/bin/zsh"] + shell.arguments(for: request.script, mode: .interactiveLogin): CommandResult(
                     command: "/bin/zsh",
-                    arguments: ["-lc", "command -v 'openclaw'"],
+                    arguments: shell.arguments(for: request.script, mode: .interactiveLogin),
                     exitCode: 1,
                     stdout: "",
                     stderr: "",
                     launchError: nil
                 ),
-                ["/bin/zsh", "-ic", "command -v 'openclaw'"]: CommandResult(
+                ["/bin/zsh"] + shell.arguments(for: request.script, mode: .login): CommandResult(
                     command: "/bin/zsh",
-                    arguments: ["-ic", "command -v 'openclaw'"],
+                    arguments: shell.arguments(for: request.script, mode: .login),
+                    exitCode: 1,
+                    stdout: "",
+                    stderr: "",
+                    launchError: nil
+                ),
+                ["/bin/zsh"] + shell.arguments(for: request.script, mode: .interactive): CommandResult(
+                    command: "/bin/zsh",
+                    arguments: shell.arguments(for: request.script, mode: .interactive),
                     exitCode: 0,
-                    stdout: "/Users/tester/.local/bin/openclaw\n",
+                    stdout: """
+                    \(request.startMarker)
+                    /Users/tester/.local/bin/openclaw
+                    \(request.endMarker)
+                    """,
                     stderr: "",
                     launchError: nil
                 )
             ]
         )
-        let resolver = ShellCommandResolver(runner: runner)
+        let resolver = ShellCommandResolver(
+            runner: runner,
+            shellProvider: StubUserShellProvider(shell: shell)
+        )
 
         let resolved = await resolver.resolve("openclaw")
 
@@ -52,25 +79,36 @@ final class ShellCommandResolverTests: XCTestCase {
     }
 
     func testResolveCachesPreviousLookups() async {
+        let shell = UserShell(executablePath: "/bin/zsh")
+        let request = ShellProbeScript.commandLookup("openclaw")
         let runner = ResolverCommandRunner(
             responses: [
-                ["/bin/zsh", "-lc", "command -v 'openclaw'"]: CommandResult(
+                ["/bin/zsh"] + shell.arguments(for: request.script, mode: .interactiveLogin): CommandResult(
                     command: "/bin/zsh",
-                    arguments: ["-lc", "command -v 'openclaw'"],
+                    arguments: shell.arguments(for: request.script, mode: .interactiveLogin),
                     exitCode: 0,
-                    stdout: "/opt/homebrew/bin/openclaw\n",
+                    stdout: """
+                    \(request.startMarker)
+                    /opt/homebrew/bin/openclaw
+                    \(request.endMarker)
+                    """,
                     stderr: "",
                     launchError: nil
                 )
             ]
         )
-        let resolver = ShellCommandResolver(runner: runner)
+        let resolver = ShellCommandResolver(
+            runner: runner,
+            shellProvider: StubUserShellProvider(shell: shell)
+        )
 
         _ = await resolver.resolve("openclaw")
         _ = await resolver.resolve("openclaw")
 
         let commands = await runner.recordedCommands()
-        XCTAssertEqual(commands, ["/bin/zsh -lc command -v 'openclaw'"])
+        let expectedCommand = ([shell.executablePath] + shell.arguments(for: request.script, mode: .interactiveLogin))
+            .joined(separator: " ")
+        XCTAssertEqual(commands, [expectedCommand])
     }
 }
 
@@ -102,5 +140,13 @@ private actor ResolverCommandRunner: CommandRunning {
 
     func recordedCommands() -> [String] {
         commands
+    }
+}
+
+private struct StubUserShellProvider: UserShellProviding {
+    let shell: UserShell
+
+    func currentShell() -> UserShell {
+        shell
     }
 }

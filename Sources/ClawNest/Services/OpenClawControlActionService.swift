@@ -24,15 +24,18 @@ struct OpenClawControlActionService: OpenClawControlActionServing {
     private let defaults: OpenClawDefaults
     private let runner: CommandRunning
     private let commandResolver: any CommandResolving
+    private let environmentProvider: any CommandEnvironmentProviding
 
     init(
         defaults: OpenClawDefaults = .standard(),
         runner: CommandRunning = ProcessCommandRunner(),
-        commandResolver: (any CommandResolving)? = nil
+        commandResolver: (any CommandResolving)? = nil,
+        environmentProvider: (any CommandEnvironmentProviding)? = nil
     ) {
         self.defaults = defaults
         self.runner = runner
         self.commandResolver = commandResolver ?? ShellCommandResolver(runner: runner)
+        self.environmentProvider = environmentProvider ?? ShellCommandEnvironmentProvider(runner: runner)
     }
 
     func descriptor(for action: OpenClawControlAction) -> OpenClawCommandDescriptor? {
@@ -56,6 +59,7 @@ struct OpenClawControlActionService: OpenClawControlActionServing {
         return AsyncStream { continuation in
             Task {
                 let resolvedCommand = await commandResolver.resolve(descriptor.command) ?? descriptor.command
+                let executionEnvironment = await environmentProvider.executionEnvironment()
                 let startedAt = Date()
                 continuation.yield(.started(
                     command: ([resolvedCommand] + descriptor.arguments).joined(separator: " "),
@@ -65,6 +69,7 @@ struct OpenClawControlActionService: OpenClawControlActionServing {
                 let result = await runner.run(
                     command: resolvedCommand,
                     arguments: descriptor.arguments,
+                    environment: executionEnvironment,
                     outputHandler: { chunk in
                         continuation.yield(.output(chunk))
                     }
