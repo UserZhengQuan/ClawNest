@@ -19,6 +19,7 @@ let package = Package(
                 "Services/ConfigurationStore.swift",
                 "Services/GatewaySupervisor.swift",
                 "Services/HealthProbeInterpreter.swift",
+                "Services/OpenClawInstallProgress.swift",
                 "Services/LogInspector.swift",
                 "Services/OpenClawInstaller.swift",
                 "ViewModels/AppModel.swift",
@@ -47,6 +48,7 @@ let package = Package(
                 "HealthProbeInterpreterTests.swift",
                 "LanguagePreferenceStoreTests.swift",
                 "OpenClawInstallerTests.swift",
+                "RuntimeActionResolverTests.swift",
                 "RuntimeSafetyTests.swift"
             ],
             sources: [
