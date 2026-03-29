@@ -27,13 +27,9 @@ final class OpenClawStatusServiceTests: XCTestCase {
             defaults: defaults,
             commandResult: CommandResult(
                 command: "openclaw",
-                arguments: ["gateway", "status"],
+                arguments: ["gateway", "status", "--json"],
                 exitCode: 0,
-                stdout: """
-                Runtime: running
-                RPC probe: ok
-                Listening: 127.0.0.1:18789
-                """,
+                stdout: #"{"runtime":"running","rpcProbe":"ok","listening":"127.0.0.1:18789"}"#,
                 stderr: "",
                 launchError: nil
             ),
@@ -55,7 +51,7 @@ final class OpenClawStatusServiceTests: XCTestCase {
             defaults: defaults,
             commandResult: CommandResult(
                 command: "openclaw",
-                arguments: ["gateway", "status"],
+                arguments: ["gateway", "status", "--json"],
                 exitCode: 127,
                 stdout: "",
                 stderr: "zsh: command not found: openclaw",
@@ -71,12 +67,32 @@ final class OpenClawStatusServiceTests: XCTestCase {
         XCTAssertEqual(snapshot.gateway.health, .unhealthy)
     }
 
-    func testInterpreterMarksRunningWhenGatewayIsReachableWithoutCli() {
+    func testInterpreterMarksRunningWhenGatewayHealthIsHealthyWithoutCli() {
         let snapshot = interpreter.makeSnapshot(
             defaults: defaults,
             commandResult: CommandResult(
                 command: "openclaw",
-                arguments: ["gateway", "status"],
+                arguments: ["gateway", "status", "--json"],
+                exitCode: 127,
+                stdout: "",
+                stderr: "zsh: command not found: openclaw",
+                launchError: nil
+            ),
+            gatewayCheck: GatewayHealthCheckResult(
+                isReachable: true,
+                health: .healthy
+            )
+        )
+
+        XCTAssertEqual(snapshot.runtimeStatus, .running)
+    }
+
+    func testInterpreterMarksUnknownWhenGatewayIsOnlyReachableWithoutCli() {
+        let snapshot = interpreter.makeSnapshot(
+            defaults: defaults,
+            commandResult: CommandResult(
+                command: "openclaw",
+                arguments: ["gateway", "status", "--json"],
                 exitCode: 127,
                 stdout: "",
                 stderr: "zsh: command not found: openclaw",
@@ -88,7 +104,7 @@ final class OpenClawStatusServiceTests: XCTestCase {
             )
         )
 
-        XCTAssertEqual(snapshot.runtimeStatus, .running)
+        XCTAssertEqual(snapshot.runtimeStatus, .unknown)
     }
 
     func testInterpreterMarksUnknownWhenProbeIsAmbiguous() {
@@ -96,13 +112,9 @@ final class OpenClawStatusServiceTests: XCTestCase {
             defaults: defaults,
             commandResult: CommandResult(
                 command: "openclaw",
-                arguments: ["gateway", "status"],
+                arguments: ["gateway", "status", "--json"],
                 exitCode: 0,
-                stdout: """
-                Runtime: running
-                RPC probe: failed
-                Last gateway error: connection refused
-                """,
+                stdout: #"{"runtime":"running","rpcProbe":"failed","lastGatewayError":"connection refused"}"#,
                 stderr: "",
                 launchError: nil
             ),
@@ -113,6 +125,50 @@ final class OpenClawStatusServiceTests: XCTestCase {
         )
 
         XCTAssertEqual(snapshot.runtimeStatus, .unknown)
+    }
+
+    func testInterpreterMarksUnknownWhenProbeSaysStoppedButPortIsReachable() {
+        let snapshot = interpreter.makeSnapshot(
+            defaults: defaults,
+            commandResult: CommandResult(
+                command: "openclaw",
+                arguments: ["gateway", "status", "--json"],
+                exitCode: 0,
+                stdout: #"{"runtime":"stopped"}"#,
+                stderr: "",
+                launchError: nil
+            ),
+            gatewayCheck: GatewayHealthCheckResult(
+                isReachable: true,
+                health: .unavailable
+            )
+        )
+
+        XCTAssertEqual(snapshot.runtimeStatus, .unknown)
+    }
+
+    func testInterpreterParsesJSONAfterConfigWarnings() {
+        let snapshot = interpreter.makeSnapshot(
+            defaults: defaults,
+            commandResult: CommandResult(
+                command: "openclaw",
+                arguments: ["gateway", "status", "--json"],
+                exitCode: 0,
+                stdout: """
+                Config warnings:
+                - duplicate plugin id detected
+                {\"runtime\":\"running\",\"rpcProbe\":\"ok\",\"listening\":\"127.0.0.1:18789\"}
+                """,
+                stderr: "",
+                launchError: nil
+            ),
+            gatewayCheck: GatewayHealthCheckResult(
+                isReachable: true,
+                health: .healthy
+            )
+        )
+
+        XCTAssertEqual(snapshot.runtimeStatus, .running)
     }
 
     func testRefreshUsesResolvedPathAndShellEnvironment() async {
@@ -131,7 +187,7 @@ final class OpenClawStatusServiceTests: XCTestCase {
         let invocation = await runner.lastInvocation()
 
         XCTAssertEqual(invocation?.command, "/opt/homebrew/bin/openclaw")
-        XCTAssertEqual(invocation?.arguments, ["gateway", "status"])
+        XCTAssertEqual(invocation?.arguments, ["gateway", "status", "--json"])
         XCTAssertEqual(invocation?.environment["PATH"], "/opt/homebrew/bin:/usr/bin:/bin")
         XCTAssertEqual(snapshot.runtimeStatus, .running)
     }
@@ -166,11 +222,7 @@ private actor StatusServiceRunner: CommandRunning {
             command: command,
             arguments: arguments,
             exitCode: 0,
-            stdout: """
-            Runtime: running
-            RPC probe: ok
-            Listening: 127.0.0.1:18789
-            """,
+            stdout: #"{"runtime":"running","rpcProbe":"ok","listening":"127.0.0.1:18789"}"#,
             stderr: "",
             launchError: nil
         )

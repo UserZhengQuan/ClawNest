@@ -188,6 +188,35 @@ struct CommandExecutionRecord: Equatable, Sendable {
         }
     }
 
+    func appendingCommand(_ command: String) -> CommandExecutionRecord {
+        let trimmedCommand = command.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmedCommand.isEmpty else { return self }
+
+        let existingCommands = self.command
+            .split(whereSeparator: \.isNewline)
+            .map(String.init)
+
+        guard existingCommands.last != trimmedCommand else {
+            return self
+        }
+
+        let updatedCommand = ([self.command] + [trimmedCommand])
+            .filter { !$0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
+            .joined(separator: "\n")
+
+        return CommandExecutionRecord(
+            action: action,
+            command: updatedCommand,
+            status: status,
+            startedAt: startedAt,
+            finishedAt: finishedAt,
+            exitCode: exitCode,
+            stdout: stdout,
+            stderr: stderr,
+            launchError: launchError
+        )
+    }
+
     var duration: TimeInterval? {
         guard let finishedAt else { return nil }
         return finishedAt.timeIntervalSince(startedAt)
@@ -230,6 +259,15 @@ struct CommandExecutionRecord: Equatable, Sendable {
         action: OpenClawControlAction,
         result: CommandResult
     ) -> CommandExecutionStatus {
+        if let statusHint = result.statusHint {
+            switch statusHint {
+            case .success:
+                return .success
+            case .failed:
+                return .failed
+            }
+        }
+
         guard result.exitCode == 0, result.launchError == nil else {
             return .failed
         }

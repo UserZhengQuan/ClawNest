@@ -30,7 +30,7 @@ struct CommandOutputPanel: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             if let record {
-                MetadataRow(label: "Command") {
+                MetadataRow(label: record.command.contains("\n") ? "Commands" : "Command") {
                     Text(record.command)
                         .font(.system(.caption, design: .monospaced))
                         .textSelection(.enabled)

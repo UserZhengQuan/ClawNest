@@ -81,12 +81,25 @@ final class OpenClawControlActionServiceTests: XCTestCase {
                 "PATH": "/opt/homebrew/bin:/usr/bin:/bin"
             ])
         )
+        var stepCommands: [String] = []
+        var finishedResult: CommandResult?
 
         guard let stream = service.execute(.start) else {
             return XCTFail("Expected executable stream")
         }
 
-        for await _ in stream {}
+        for await event in stream {
+            switch event {
+            case .started:
+                break
+            case let .stepStarted(command):
+                stepCommands.append(command)
+            case .output:
+                break
+            case let .finished(result):
+                finishedResult = result
+            }
+        }
 
         let invocations = await runner.invocations()
         XCTAssertEqual(invocations.map(\.command), [
@@ -99,6 +112,19 @@ final class OpenClawControlActionServiceTests: XCTestCase {
             ["gateway", "install"],
             ["gateway", "start"]
         ])
+        XCTAssertEqual(stepCommands, [
+            "/opt/homebrew/bin/openclaw gateway install",
+            "/opt/homebrew/bin/openclaw gateway start"
+        ])
+        XCTAssertEqual(finishedResult?.renderedCommand, """
+        /opt/homebrew/bin/openclaw gateway start
+        /opt/homebrew/bin/openclaw gateway install
+        /opt/homebrew/bin/openclaw gateway start
+        """)
+        XCTAssertEqual(
+            finishedResult.map { CommandExecutionRecord.finished(action: .start, result: $0).status },
+            .success
+        )
     }
 
     func testStartUsesSingleGatewayStartWhenInitialCommandSucceeds() async {
@@ -149,6 +175,32 @@ final class OpenClawControlActionServiceTests: XCTestCase {
         )
 
         XCTAssertEqual(record.status, .failed)
+    }
+
+    func testFinishedRecordUsesResultStatusHintWhenProvided() {
+        let record = CommandExecutionRecord.finished(
+            action: .start,
+            result: CommandResult(
+                command: """
+                openclaw gateway start
+                openclaw gateway install
+                openclaw gateway start
+                """,
+                arguments: [],
+                exitCode: 0,
+                stdout: """
+                Gateway service not loaded.
+                Start with: openclaw gateway install
+                Installed LaunchAgent
+                Started Gateway
+                """,
+                stderr: "",
+                launchError: nil,
+                statusHint: .success
+            )
+        )
+
+        XCTAssertEqual(record.status, .success)
     }
 
     func testStartDoesNotAttemptGatewayStartWhenInstallFails() async {

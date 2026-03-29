@@ -50,7 +50,9 @@ final class StatusPanelViewModelTests: XCTestCase {
             ]),
             actionService: actionService,
             systemActions: NoopLocalSystemActionHandler(),
-            pollIntervalSeconds: 3_600
+            pollIntervalSeconds: 3_600,
+            startOrRestartMaxAttempts: 1,
+            startOrRestartIntervalMilliseconds: 0
         )
 
         viewModel.perform(.start)
@@ -66,6 +68,53 @@ final class StatusPanelViewModelTests: XCTestCase {
         XCTAssertEqual(viewModel.commandOutput?.status, .success)
     }
 
+    func testStartKeepsSuccessfulCommandWhenFollowUpStatusIsUnknown() async {
+        let actionService = RecordingActionService(
+            result: CommandResult(
+                command: """
+                openclaw gateway start
+                openclaw gateway install
+                openclaw gateway start
+                """,
+                arguments: [],
+                exitCode: 0,
+                stdout: """
+                Gateway service not loaded.
+                Start with: openclaw gateway install
+                Installed LaunchAgent
+                Started Gateway
+                """,
+                stderr: "",
+                launchError: nil,
+                statusHint: .success
+            )
+        )
+        let viewModel = StatusPanelViewModel(
+            statusService: SequencedStatusService(snapshots: [
+                unknownSnapshot()
+            ]),
+            actionService: actionService,
+            systemActions: NoopLocalSystemActionHandler(),
+            pollIntervalSeconds: 3_600,
+            startOrRestartMaxAttempts: 1,
+            startOrRestartIntervalMilliseconds: 0
+        )
+
+        viewModel.perform(.start)
+        await fulfillment(of: [actionService.executeExpectation], timeout: 1)
+
+        for _ in 0 ..< 40 {
+            if viewModel.commandOutput?.status == .success,
+               viewModel.commandOutput?.stderr.contains("still inconclusive") == true {
+                break
+            }
+            try? await Task.sleep(for: .milliseconds(25))
+        }
+
+        XCTAssertEqual(viewModel.commandOutput?.status, .success)
+        XCTAssertTrue(viewModel.commandOutput?.stderr.contains("still inconclusive") ?? false)
+    }
+
     private func runningSnapshot() -> OpenClawStatusSnapshot {
         let defaults = OpenClawDefaults.standard(
             homeDirectory: URL(fileURLWithPath: "/Users/tester", isDirectory: true)
@@ -77,6 +126,22 @@ final class StatusPanelViewModelTests: XCTestCase {
                 url: defaults.gatewayURL,
                 port: defaults.port,
                 health: .healthy
+            ),
+            paths: defaults.paths
+        )
+    }
+
+    private func unknownSnapshot() -> OpenClawStatusSnapshot {
+        let defaults = OpenClawDefaults.standard(
+            homeDirectory: URL(fileURLWithPath: "/Users/tester", isDirectory: true)
+        )
+        return OpenClawStatusSnapshot(
+            runtimeStatus: .unknown,
+            lastCheckedAt: .now,
+            gateway: GatewayStatusDetails(
+                url: defaults.gatewayURL,
+                port: defaults.port,
+                health: .unavailable
             ),
             paths: defaults.paths
         )

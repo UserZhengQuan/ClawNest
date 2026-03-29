@@ -52,6 +52,10 @@ final class StatusPanelViewModel: ObservableObject {
     private let actionService: any OpenClawControlActionServing
     private let systemActions: any LocalSystemActionHandling
     private let pollIntervalSeconds: Double
+    private let startOrRestartMaxAttempts: Int
+    private let startOrRestartIntervalMilliseconds: UInt64
+    private let stopMaxAttempts: Int
+    private let stopIntervalMilliseconds: UInt64
     private var hasLoaded = false
     private var pollTask: Task<Void, Never>?
 
@@ -59,7 +63,11 @@ final class StatusPanelViewModel: ObservableObject {
         statusService: any OpenClawStatusServing = OpenClawStatusService(),
         actionService: any OpenClawControlActionServing = OpenClawControlActionService(),
         systemActions: any LocalSystemActionHandling = DefaultLocalSystemActionHandler(),
-        pollIntervalSeconds: Double = 45
+        pollIntervalSeconds: Double = 45,
+        startOrRestartMaxAttempts: Int = 20,
+        startOrRestartIntervalMilliseconds: UInt64 = 1_000,
+        stopMaxAttempts: Int = 12,
+        stopIntervalMilliseconds: UInt64 = 500
     ) {
         let defaults = OpenClawDefaults.standard()
         self.snapshot = .placeholder(defaults: defaults)
@@ -67,6 +75,10 @@ final class StatusPanelViewModel: ObservableObject {
         self.actionService = actionService
         self.systemActions = systemActions
         self.pollIntervalSeconds = pollIntervalSeconds
+        self.startOrRestartMaxAttempts = startOrRestartMaxAttempts
+        self.startOrRestartIntervalMilliseconds = startOrRestartIntervalMilliseconds
+        self.stopMaxAttempts = stopMaxAttempts
+        self.stopIntervalMilliseconds = stopIntervalMilliseconds
     }
 
     deinit {
@@ -187,6 +199,13 @@ final class StatusPanelViewModel: ObservableObject {
             switch event {
             case let .started(command, startedAt):
                 commandOutput = .running(action: action, command: command, startedAt: startedAt)
+            case let .stepStarted(command):
+                guard let current = commandOutput,
+                      current.action == action,
+                      current.status == .running else {
+                    continue
+                }
+                commandOutput = current.appendingCommand(command)
             case let .output(chunk):
                 guard let current = commandOutput,
                       current.action == action,
@@ -206,9 +225,15 @@ final class StatusPanelViewModel: ObservableObject {
     private func refreshAfterCommand(_ action: OpenClawControlAction) async {
         switch action {
         case .start, .restart:
-            await refreshUntil(maxAttempts: 20, intervalMilliseconds: 1_000) { $0 == .running }
+            await refreshUntil(
+                maxAttempts: startOrRestartMaxAttempts,
+                intervalMilliseconds: startOrRestartIntervalMilliseconds
+            ) { $0 == .running || $0 == .stopped }
         case .stop:
-            await refreshUntil(maxAttempts: 12, intervalMilliseconds: 500) { $0 != .running }
+            await refreshUntil(
+                maxAttempts: stopMaxAttempts,
+                intervalMilliseconds: stopIntervalMilliseconds
+            ) { $0 != .running }
         case .refresh, .openChat, .repair:
             await refresh()
         }
@@ -237,10 +262,20 @@ final class StatusPanelViewModel: ObservableObject {
         case .start, .restart:
             if snapshot.runtimeStatus == .running {
                 self.commandOutput = commandOutput.overridingStatus(.success)
-            } else {
+            } else if snapshot.runtimeStatus == .stopped {
                 self.commandOutput = commandOutput.overridingStatus(
                     .failed,
                     appendingStderr: "OpenClaw did not report Running after the command completed."
+                )
+            } else if commandOutput.status == .success {
+                self.commandOutput = commandOutput.overridingStatus(
+                    .success,
+                    appendingStderr: "OpenClaw status is still inconclusive after the command completed."
+                )
+            } else {
+                self.commandOutput = commandOutput.overridingStatus(
+                    .failed,
+                    appendingStderr: "OpenClaw status is still inconclusive after the command completed."
                 )
             }
         case .stop:

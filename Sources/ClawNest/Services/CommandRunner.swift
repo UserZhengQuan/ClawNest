@@ -10,6 +10,11 @@ struct CommandOutputChunk: Sendable {
     let text: String
 }
 
+enum CommandResultStatusHint: Sendable {
+    case success
+    case failed
+}
+
 struct CommandResult: Sendable {
     let command: String
     let arguments: [String]
@@ -17,6 +22,7 @@ struct CommandResult: Sendable {
     let stdout: String
     let stderr: String
     let launchError: String?
+    let statusHint: CommandResultStatusHint?
     let startedAt: Date
     let finishedAt: Date
 
@@ -27,6 +33,7 @@ struct CommandResult: Sendable {
         stdout: String,
         stderr: String,
         launchError: String?,
+        statusHint: CommandResultStatusHint? = nil,
         startedAt: Date = .now,
         finishedAt: Date? = nil
     ) {
@@ -36,6 +43,7 @@ struct CommandResult: Sendable {
         self.stdout = stdout
         self.stderr = stderr
         self.launchError = launchError
+        self.statusHint = statusHint
         self.startedAt = startedAt
         self.finishedAt = finishedAt ?? startedAt
     }

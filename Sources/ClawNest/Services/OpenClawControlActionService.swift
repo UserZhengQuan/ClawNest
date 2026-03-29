@@ -11,6 +11,7 @@ struct OpenClawCommandDescriptor: Equatable, Sendable {
 
 enum CommandExecutionEvent: Sendable {
     case started(command: String, startedAt: Date)
+    case stepStarted(command: String)
     case output(CommandOutputChunk)
     case finished(CommandResult)
 }
@@ -75,6 +76,9 @@ struct OpenClawControlActionService: OpenClawControlActionServing {
                     initialArguments: descriptor.arguments,
                     environment: executionEnvironment,
                     startedAt: startedAt,
+                    stepHandler: { command in
+                        continuation.yield(.stepStarted(command: command))
+                    },
                     outputHandler: { chunk in
                         continuation.yield(.output(chunk))
                     }
@@ -91,6 +95,7 @@ struct OpenClawControlActionService: OpenClawControlActionServing {
         initialArguments: [String],
         environment: [String: String],
         startedAt: Date,
+        stepHandler: @escaping @Sendable (String) -> Void,
         outputHandler: (@Sendable (CommandOutputChunk) -> Void)?
     ) async -> CommandResult {
         let initialDescriptor = OpenClawCommandDescriptor(command: command, arguments: initialArguments)
@@ -117,6 +122,7 @@ struct OpenClawControlActionService: OpenClawControlActionServing {
                 installDescriptor,
                 shouldShowBanner: true,
                 environment: environment,
+                stepHandler: stepHandler,
                 outputHandler: outputHandler
             )
             aggregatedResults.append(installResult)
@@ -127,6 +133,7 @@ struct OpenClawControlActionService: OpenClawControlActionServing {
                     initialDescriptor,
                     shouldShowBanner: true,
                     environment: environment,
+                    stepHandler: stepHandler,
                     outputHandler: outputHandler
                 )
                 aggregatedResults.append(retryResult)
@@ -146,13 +153,14 @@ struct OpenClawControlActionService: OpenClawControlActionServing {
 
         return CommandResult(
             command: executionPlan
-                .map { "$ \($0.renderedCommand)" }
+                .map(\.renderedCommand)
                 .joined(separator: "\n"),
             arguments: [],
             exitCode: exitCode,
             stdout: stdout,
             stderr: stderr,
             launchError: launchErrors.isEmpty ? nil : launchErrors.joined(separator: "\n"),
+            statusHint: executionStatusHint(for: action, results: aggregatedResults),
             startedAt: startedAt,
             finishedAt: finishedAt
         )
@@ -162,10 +170,12 @@ struct OpenClawControlActionService: OpenClawControlActionServing {
         _ descriptor: OpenClawCommandDescriptor,
         shouldShowBanner: Bool,
         environment: [String: String],
+        stepHandler: (@Sendable (String) -> Void)? = nil,
         outputHandler: (@Sendable (CommandOutputChunk) -> Void)?
     ) async -> CommandResult {
         let banner = shouldShowBanner ? "$ \(descriptor.renderedCommand)\n" : ""
         if shouldShowBanner {
+            stepHandler?(descriptor.renderedCommand)
             outputHandler?(CommandOutputChunk(stream: .stdout, text: banner))
         }
 
@@ -190,13 +200,37 @@ struct OpenClawControlActionService: OpenClawControlActionServing {
     }
 
     private func requiresGatewayInstall(after result: CommandResult) -> Bool {
+        hasUnresolvedGatewayInstallInstruction(in: result)
+    }
+
+    private func executionStatusHint(
+        for action: OpenClawControlAction,
+        results: [CommandResult]
+    ) -> CommandResultStatusHint? {
+        guard let finalResult = results.last else {
+            return nil
+        }
+
+        if finalResult.exitCode != 0 || finalResult.launchError != nil {
+            return .failed
+        }
+
+        switch action {
+        case .start, .restart:
+            return hasUnresolvedGatewayInstallInstruction(in: finalResult) ? .failed : .success
+        case .stop, .repair:
+            return .success
+        case .refresh, .openChat:
+            return nil
+        }
+    }
+
+    private func hasUnresolvedGatewayInstallInstruction(in result: CommandResult) -> Bool {
         let text = [result.stdout, result.stderr, result.launchError ?? ""]
             .joined(separator: "\n")
             .lowercased()
 
         return text.contains("gateway service not loaded")
-            || text.contains("service not loaded")
-            || text.contains("start with: openclaw gateway install")
-            || text.contains("not installed")
+            && text.contains("start with: openclaw gateway install")
     }
 }
