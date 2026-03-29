@@ -27,9 +27,13 @@ final class OpenClawStatusServiceTests: XCTestCase {
             defaults: defaults,
             commandResult: CommandResult(
                 command: "openclaw",
-                arguments: ["health", "--json"],
+                arguments: ["gateway", "status"],
                 exitCode: 0,
-                stdout: #"{"ok":true,"status":"ready"}"#,
+                stdout: """
+                Runtime: running
+                RPC probe: ok
+                Listening: 127.0.0.1:18789
+                """,
                 stderr: "",
                 launchError: nil
             ),
@@ -51,7 +55,7 @@ final class OpenClawStatusServiceTests: XCTestCase {
             defaults: defaults,
             commandResult: CommandResult(
                 command: "openclaw",
-                arguments: ["health", "--json"],
+                arguments: ["gateway", "status"],
                 exitCode: 127,
                 stdout: "",
                 stderr: "zsh: command not found: openclaw",
@@ -72,7 +76,7 @@ final class OpenClawStatusServiceTests: XCTestCase {
             defaults: defaults,
             commandResult: CommandResult(
                 command: "openclaw",
-                arguments: ["health", "--json"],
+                arguments: ["gateway", "status"],
                 exitCode: 127,
                 stdout: "",
                 stderr: "zsh: command not found: openclaw",
@@ -92,9 +96,13 @@ final class OpenClawStatusServiceTests: XCTestCase {
             defaults: defaults,
             commandResult: CommandResult(
                 command: "openclaw",
-                arguments: ["health", "--json"],
+                arguments: ["gateway", "status"],
                 exitCode: 0,
-                stdout: #"{"status":"warming"}"#,
+                stdout: """
+                Runtime: running
+                RPC probe: failed
+                Last gateway error: connection refused
+                """,
                 stderr: "",
                 launchError: nil
             ),
@@ -123,7 +131,7 @@ final class OpenClawStatusServiceTests: XCTestCase {
         let invocation = await runner.lastInvocation()
 
         XCTAssertEqual(invocation?.command, "/opt/homebrew/bin/openclaw")
-        XCTAssertEqual(invocation?.arguments, ["health", "--json"])
+        XCTAssertEqual(invocation?.arguments, ["gateway", "status"])
         XCTAssertEqual(invocation?.environment["PATH"], "/opt/homebrew/bin:/usr/bin:/bin")
         XCTAssertEqual(snapshot.runtimeStatus, .running)
     }
@@ -158,7 +166,11 @@ private actor StatusServiceRunner: CommandRunning {
             command: command,
             arguments: arguments,
             exitCode: 0,
-            stdout: #"{"ok":true,"status":"ready"}"#,
+            stdout: """
+            Runtime: running
+            RPC probe: ok
+            Listening: 127.0.0.1:18789
+            """,
             stderr: "",
             launchError: nil
         )

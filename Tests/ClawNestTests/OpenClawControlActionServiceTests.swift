@@ -9,7 +9,7 @@ final class OpenClawControlActionServiceTests: XCTestCase {
         )
         let service = OpenClawControlActionService(defaults: defaults, runner: ProcessCommandRunner())
 
-        XCTAssertEqual(service.descriptor(for: .start)?.renderedCommand, "openclaw gateway install")
+        XCTAssertEqual(service.descriptor(for: .start)?.renderedCommand, "openclaw gateway start")
         XCTAssertEqual(service.descriptor(for: .restart)?.renderedCommand, "openclaw gateway restart")
         XCTAssertEqual(service.descriptor(for: .stop)?.renderedCommand, "openclaw gateway stop")
         XCTAssertEqual(service.descriptor(for: .repair)?.renderedCommand, "openclaw doctor --fix")

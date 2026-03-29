@@ -43,7 +43,7 @@ struct OpenClawControlActionService: OpenClawControlActionServing {
         case .refresh, .openChat:
             return nil
         case .start:
-            return OpenClawCommandDescriptor(command: defaults.openClawCommand, arguments: ["gateway", "install"])
+            return OpenClawCommandDescriptor(command: defaults.openClawCommand, arguments: ["gateway", "start"])
         case .restart:
             return OpenClawCommandDescriptor(command: defaults.openClawCommand, arguments: ["gateway", "restart"])
         case .stop:

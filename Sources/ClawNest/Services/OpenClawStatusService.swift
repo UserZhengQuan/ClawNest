@@ -43,7 +43,7 @@ struct OpenClawStatusService: OpenClawStatusServing {
 
         async let probeResult = runner.run(
             command: openClawCommand,
-            arguments: ["health", "--json"],
+            arguments: ["gateway", "status"],
             environment: executionEnvironment
         )
         async let gatewayCheck = gatewayChecker.check(url: defaults.gatewayURL)
@@ -102,25 +102,36 @@ struct OpenClawStatusInterpreter {
             return .stopped
         }
 
-        let parsedJSON = parseJSON(result.stdout)
-        let okFlag = firstBool(in: parsedJSON, matching: ["ok", "healthy", "reachable"])
-        let statusText = firstString(in: parsedJSON, matching: ["status", "state", "phase", "gatewayStatus"])
-        let combinedText = [statusText, result.stdout, result.stderr, result.launchError]
+        let combinedText = [result.stdout, result.stderr, result.launchError]
             .compactMap { $0?.lowercased() }
             .joined(separator: " ")
+        let runtimeLine = lineValue(in: result.stdout, forPrefix: "runtime:")
+        let rpcProbeLine = lineValue(in: result.stdout, forPrefix: "rpc probe:")
+        let listeningLine = lineValue(in: result.stdout, forPrefix: "listening:")
+        let lastGatewayErrorLine = lineValue(in: result.stdout, forPrefix: "last gateway error:")
 
-        if okFlag == true {
+        if containsAny(of: "ok healthy ready running reachable", in: rpcProbeLine) {
             return .running
         }
 
-        if let statusText,
-           containsAny(of: "healthy ready running online connected", in: statusText.lowercased()) {
+        if containsAny(of: "127.0.0.1 localhost loopback http ws", in: listeningLine),
+           !containsAny(of: "none no not", in: listeningLine) {
             return .running
         }
 
-        if containsAny(of: "healthy ready running online connected reachable", in: combinedText),
-           result.exitCode == 0 {
-            return .running
+        if containsAnyPhrase(
+            ["stopped", "not running", "unloaded", "missing", "absent", "inactive", "not installed"],
+            in: runtimeLine
+        ) {
+            return .stopped
+        }
+
+        if containsAnyPhrase(["running", "active", "loaded"], in: runtimeLine),
+           containsAnyPhrase(
+            ["failed", "error", "refused", "timeout", "unreachable", "down"],
+            in: rpcProbeLine + " " + lastGatewayErrorLine
+           ) {
+            return .unknown
         }
 
         if containsAny(of: "offline stopped unhealthy failed refused timeout error", in: combinedText) {
@@ -132,14 +143,6 @@ struct OpenClawStatusInterpreter {
         }
 
         return .unknown
-    }
-
-    private func parseJSON(_ text: String) -> Any? {
-        guard let data = text.data(using: .utf8), !data.isEmpty else {
-            return nil
-        }
-
-        return try? JSONSerialization.jsonObject(with: data)
     }
 
     private func isMissingCommand(_ result: CommandResult) -> Bool {
@@ -162,52 +165,17 @@ struct OpenClawStatusInterpreter {
             .contains { text.contains($0) }
     }
 
-    private func firstString(in json: Any?, matching keys: Set<String>) -> String? {
-        firstValue(in: json, matching: keys) { value in
-            switch value {
-            case let string as String:
-                return string
-            case let number as NSNumber:
-                return number.stringValue
-            default:
-                return nil
-            }
-        }
+    private func containsAnyPhrase(_ phrases: [String], in text: String) -> Bool {
+        phrases.contains { text.contains($0) }
     }
 
-    private func firstBool(in json: Any?, matching keys: Set<String>) -> Bool? {
-        firstValue(in: json, matching: keys) { value in
-            value as? Bool
-        }
-    }
-
-    private func firstValue<T>(
-        in json: Any?,
-        matching keys: Set<String>,
-        transform: (Any) -> T?
-    ) -> T? {
-        switch json {
-        case let dictionary as [String: Any]:
-            for (key, value) in dictionary {
-                if keys.contains(key), let transformed = transform(value) {
-                    return transformed
-                }
-
-                if let nested = firstValue(in: value, matching: keys, transform: transform) {
-                    return nested
-                }
-            }
-            return nil
-        case let array as [Any]:
-            for item in array {
-                if let nested = firstValue(in: item, matching: keys, transform: transform) {
-                    return nested
-                }
-            }
-            return nil
-        default:
-            return nil
-        }
+    private func lineValue(in text: String, forPrefix prefix: String) -> String {
+        text
+            .split(whereSeparator: \.isNewline)
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() }
+            .first { $0.hasPrefix(prefix) }?
+            .dropFirst(prefix.count)
+            .trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
     }
 
     private enum ProbeState {
