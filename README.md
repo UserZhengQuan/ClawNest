@@ -1,36 +1,53 @@
 # ClawNest
 
-ClawNest is a macOS local OpenClaw workstation for installing the OpenClaw CLI, monitoring runtime health, and repairing a local OpenClaw runtime.
+ClawNest is a minimal macOS menu bar control panel for one local OpenClaw runtime.
 
-## Product Positioning
+It is not an installer, not a multi-instance manager, and not a remote control platform. It is a small native wrapper around the local OpenClaw CLI so you can check status, open chat, and run a few official control actions from the menu bar.
 
-ClawNest is a native control surface for one local OpenClaw runtime on the current Mac.
-It sits on top of the existing OpenClaw CLI, launchd job, dashboard, and logs, and gives users one place to check status and recover when the runtime is unhealthy.
+## What It Does
 
-## Core Capabilities
+- Shows the current local OpenClaw status in the macOS menu bar
+- Displays the default local gateway, root path, config path, and logs path
+- Runs a small set of official actions: `Open Chat`, `Refresh`, `Start`, `Restart`, `Stop`, `Repair`
+- Shows the most recent command result in a separate output window with command, timestamps, exit code, stdout, and stderr
 
-- Install or verify the OpenClaw CLI
-- Check local runtime health with `openclaw health --json`
-- Run local recovery actions: start, restart, and `openclaw doctor --repair --non-interactive`
-- Open the local dashboard and reveal local OpenClaw logs
-- Show status and quick actions from the menu bar
+## Product Boundaries
 
-## Not Included in This Version
+ClawNest intentionally stays narrow:
 
-- Multi-instance OpenClaw management or provisioning
-- Remote runtime or remote agent management
-- In-app workspace/gateway/launchd onboarding beyond handing off to `openclaw onboard --install-daemon`
-- Chat, feed, or placeholder product areas without real backing functionality
-- Multi-Claw orchestration or agent-platform behavior
+- One local OpenClaw runtime on the current Mac
+- One menu bar surface
+- Default local gateway assumptions
+- Official CLI-driven actions only
 
-## Current Scope
+ClawNest does not try to be:
 
-- One `Claw` workspace for the current local OpenClaw runtime
-- One menu bar surface for the same runtime
-- Runtime health, diagnostics, dashboard access, local logs, and runtime settings
-- Official CLI install/check flow plus explicit handoff to official onboarding
+- An OpenClaw installer or onboarding replacement
+- A multi-instance or multi-profile runtime manager
+- A remote monitoring or remote operations system
+- A custom WebView chat shell
+- A generic OpenClaw workstation with broad settings and diagnostics
 
-Detailed scope and product rules are documented in [docs/ProductPositioning.md](docs/ProductPositioning.md).
+## Official Commands Used
+
+The current menu actions map to these commands and behaviors:
+
+- `Open Chat` opens `http://127.0.0.1:18789/` with the system browser
+- `Refresh` re-reads local status
+- `Start` runs `openclaw gateway start`
+- `Restart` runs `openclaw gateway restart`
+- `Stop` runs `openclaw gateway stop`
+- `Repair` runs `openclaw doctor --fix`
+
+## Default Assumptions
+
+This version is intentionally opinionated and local-first:
+
+- Gateway URL: `http://127.0.0.1:18789/`
+- OpenClaw root path: `~/.openclaw`
+- Config path: `~/.openclaw/openclaw.json`
+- Logs path: `~/.openclaw/logs`
+- OpenClaw CLI command: `openclaw`
 
 ## Run Locally
 
@@ -46,26 +63,8 @@ Or open the package in Xcode and run the `ClawNest` executable target.
 ./scripts/package_clawnest.sh
 ```
 
-That script builds a release binary, wraps it in `dist/ClawNest.app`, applies ad-hoc signing for local use, and writes `dist/ClawNest.zip` for easy sharing.
-It also syncs both files to `~/Downloads` so the latest test build is easy to find.
+That script builds a release binary, wraps it in `dist/ClawNest.app`, applies ad-hoc signing for local use, creates `dist/ClawNest.zip`, and syncs both files to `~/Downloads`.
 
 ## License
 
 ClawNest is released under the MIT License. See [LICENSE](LICENSE).
-
-## Default Assumptions
-
-- OpenClaw CLI is available on `PATH` as `openclaw`
-- Local dashboard runs on `http://127.0.0.1:18789/`
-- LaunchAgent label is `ai.openclaw.gateway`
-- Logs are written under `/tmp/openclaw`
-
-All of those can be changed from the local runtime settings inside the app.
-
-## Third-Party Reference and License Note
-
-We currently reference [openclaw-control-center](https://github.com/TianyiDataScience/openclaw-control-center) and [nexu](https://github.com/nexu-io/nexu) as product inspiration only.
-
-As of March 23, 2026, both GitHub repositories are marked as MIT-licensed. If ClawNest only borrows ideas and does not copy code, assets, or substantial text from those projects, MIT normally does not require us to ship their license text inside this repo. If we later copy any code or bundled assets from either repo, we should preserve the relevant MIT copyright notice and license text for the copied material.
-
-See [docs/ThirdPartyReferences.md](docs/ThirdPartyReferences.md).
