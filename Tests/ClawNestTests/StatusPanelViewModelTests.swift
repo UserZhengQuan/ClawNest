@@ -68,7 +68,15 @@ final class StatusPanelViewModelTests: XCTestCase {
         XCTAssertEqual(viewModel.commandOutput?.status, .success)
     }
 
-    func testStartKeepsSuccessfulCommandWhenFollowUpStatusIsUnknown() async {
+    func testStartAppendsDiagnosticsWhenFollowUpStatusIsUnknown() async {
+        let diagnosticStatus = CommandResult(
+            command: "openclaw",
+            arguments: ["gateway", "status"],
+            exitCode: 0,
+            stdout: "Runtime: starting",
+            stderr: "RPC probe: timeout",
+            launchError: nil
+        )
         let actionService = RecordingActionService(
             result: CommandResult(
                 command: """
@@ -90,9 +98,10 @@ final class StatusPanelViewModelTests: XCTestCase {
             )
         )
         let viewModel = StatusPanelViewModel(
-            statusService: SequencedStatusService(snapshots: [
-                unknownSnapshot()
-            ]),
+            statusService: DiagnosticStubStatusService(
+                snapshots: [unknownSnapshot()],
+                diagnosticStatus: diagnosticStatus
+            ),
             actionService: actionService,
             systemActions: NoopLocalSystemActionHandler(),
             pollIntervalSeconds: 3_600,
@@ -104,15 +113,104 @@ final class StatusPanelViewModelTests: XCTestCase {
         await fulfillment(of: [actionService.executeExpectation], timeout: 1)
 
         for _ in 0 ..< 40 {
-            if viewModel.commandOutput?.status == .success,
-               viewModel.commandOutput?.stderr.contains("still inconclusive") == true {
+            if viewModel.commandOutput?.status == .failed,
+               viewModel.commandOutput?.stdout.contains("$ openclaw gateway status") == true {
+                break
+            }
+            try? await Task.sleep(for: .milliseconds(25))
+        }
+
+        XCTAssertEqual(viewModel.commandOutput?.status, .failed)
+        XCTAssertTrue(viewModel.commandOutput?.stdout.contains("$ openclaw gateway status") ?? false)
+        XCTAssertTrue(viewModel.commandOutput?.stderr.contains("RPC probe: timeout") ?? false)
+    }
+
+    func testStartDoesNotFailWhenStatusIsInitiallyStoppedThenTurnsRunning() async {
+        let actionService = RecordingActionService(
+            result: CommandResult(
+                command: "openclaw gateway start",
+                arguments: ["gateway", "start"],
+                exitCode: 0,
+                stdout: "Started Gateway",
+                stderr: "",
+                launchError: nil,
+                statusHint: .success
+            )
+        )
+        let viewModel = StatusPanelViewModel(
+            statusService: SequencedStatusService(snapshots: [
+                stoppedSnapshot(),
+                runningSnapshot()
+            ]),
+            actionService: actionService,
+            systemActions: NoopLocalSystemActionHandler(),
+            pollIntervalSeconds: 3_600,
+            startOrRestartMaxAttempts: 2,
+            startOrRestartIntervalMilliseconds: 0
+        )
+
+        viewModel.perform(.start)
+        await fulfillment(of: [actionService.executeExpectation], timeout: 1)
+
+        for _ in 0 ..< 40 {
+            if viewModel.commandOutput?.status == .success {
                 break
             }
             try? await Task.sleep(for: .milliseconds(25))
         }
 
         XCTAssertEqual(viewModel.commandOutput?.status, .success)
-        XCTAssertTrue(viewModel.commandOutput?.stderr.contains("still inconclusive") ?? false)
+    }
+
+    func testStartAppendsOfficialStatusDiagnosticsWhenGatewayNeverTurnsRunning() async {
+        let diagnosticStatus = CommandResult(
+            command: "openclaw",
+            arguments: ["gateway", "status"],
+            exitCode: 0,
+            stdout: """
+            Runtime: stopped
+            Last gateway error: connection refused
+            """,
+            stderr: "",
+            launchError: nil
+        )
+        let actionService = RecordingActionService(
+            result: CommandResult(
+                command: "openclaw gateway start",
+                arguments: ["gateway", "start"],
+                exitCode: 0,
+                stdout: "Started Gateway",
+                stderr: "",
+                launchError: nil,
+                statusHint: .success
+            )
+        )
+        let viewModel = StatusPanelViewModel(
+            statusService: DiagnosticStubStatusService(
+                snapshots: [stoppedSnapshot()],
+                diagnosticStatus: diagnosticStatus
+            ),
+            actionService: actionService,
+            systemActions: NoopLocalSystemActionHandler(),
+            pollIntervalSeconds: 3_600,
+            startOrRestartMaxAttempts: 1,
+            startOrRestartIntervalMilliseconds: 0
+        )
+
+        viewModel.perform(.start)
+        await fulfillment(of: [actionService.executeExpectation], timeout: 1)
+
+        for _ in 0 ..< 40 {
+            if viewModel.commandOutput?.status == .failed,
+               viewModel.commandOutput?.stdout.contains("$ openclaw gateway status") == true {
+                break
+            }
+            try? await Task.sleep(for: .milliseconds(25))
+        }
+
+        XCTAssertEqual(viewModel.commandOutput?.status, .failed)
+        XCTAssertTrue(viewModel.commandOutput?.stdout.contains("$ openclaw gateway status") ?? false)
+        XCTAssertTrue(viewModel.commandOutput?.stdout.contains("Last gateway error: connection refused") ?? false)
     }
 
     private func runningSnapshot() -> OpenClawStatusSnapshot {
@@ -146,6 +244,22 @@ final class StatusPanelViewModelTests: XCTestCase {
             paths: defaults.paths
         )
     }
+
+    private func stoppedSnapshot() -> OpenClawStatusSnapshot {
+        let defaults = OpenClawDefaults.standard(
+            homeDirectory: URL(fileURLWithPath: "/Users/tester", isDirectory: true)
+        )
+        return OpenClawStatusSnapshot(
+            runtimeStatus: .stopped,
+            lastCheckedAt: .now,
+            gateway: GatewayStatusDetails(
+                url: defaults.gatewayURL,
+                port: defaults.port,
+                health: .unhealthy
+            ),
+            paths: defaults.paths
+        )
+    }
 }
 
 private struct StubStatusService: OpenClawStatusServing {
@@ -153,6 +267,17 @@ private struct StubStatusService: OpenClawStatusServing {
 
     func refresh() async -> OpenClawStatusSnapshot {
         snapshots.first ?? .placeholder()
+    }
+
+    func diagnosticStatus() async -> CommandResult {
+        CommandResult(
+            command: "openclaw",
+            arguments: ["gateway", "status"],
+            exitCode: 0,
+            stdout: "",
+            stderr: "",
+            launchError: nil
+        )
     }
 }
 
@@ -173,6 +298,43 @@ private actor SequencedStatusService: OpenClawStatusServing {
         }
 
         return snapshots.removeFirst()
+    }
+
+    func diagnosticStatus() async -> CommandResult {
+        CommandResult(
+            command: "openclaw",
+            arguments: ["gateway", "status"],
+            exitCode: 0,
+            stdout: "",
+            stderr: "",
+            launchError: nil
+        )
+    }
+}
+
+private actor DiagnosticStubStatusService: OpenClawStatusServing {
+    private var snapshots: [OpenClawStatusSnapshot]
+    private let diagnostic: CommandResult
+
+    init(snapshots: [OpenClawStatusSnapshot], diagnosticStatus: CommandResult) {
+        self.snapshots = snapshots
+        self.diagnostic = diagnosticStatus
+    }
+
+    func refresh() async -> OpenClawStatusSnapshot {
+        if snapshots.isEmpty {
+            return .placeholder()
+        }
+
+        if snapshots.count == 1 {
+            return snapshots[0]
+        }
+
+        return snapshots.removeFirst()
+    }
+
+    func diagnosticStatus() async -> CommandResult {
+        diagnostic
     }
 }
 

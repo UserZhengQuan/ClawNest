@@ -217,6 +217,23 @@ struct CommandExecutionRecord: Equatable, Sendable {
         )
     }
 
+    func appendingOutput(
+        stdout additionalStdout: String = "",
+        stderr additionalStderr: String = ""
+    ) -> CommandExecutionRecord {
+        CommandExecutionRecord(
+            action: action,
+            command: command,
+            status: status,
+            startedAt: startedAt,
+            finishedAt: finishedAt,
+            exitCode: exitCode,
+            stdout: stdout + additionalStdout,
+            stderr: stderr + additionalStderr,
+            launchError: launchError
+        )
+    }
+
     var duration: TimeInterval? {
         guard let finishedAt else { return nil }
         return finishedAt.timeIntervalSince(startedAt)

@@ -219,7 +219,7 @@ final class StatusPanelViewModel: ObservableObject {
         }
 
         await refreshAfterCommand(action)
-        reconcileCommandOutcome(after: action)
+        await reconcileCommandOutcome(after: action)
     }
 
     private func refreshAfterCommand(_ action: OpenClawControlAction) async {
@@ -228,7 +228,7 @@ final class StatusPanelViewModel: ObservableObject {
             await refreshUntil(
                 maxAttempts: startOrRestartMaxAttempts,
                 intervalMilliseconds: startOrRestartIntervalMilliseconds
-            ) { $0 == .running || $0 == .stopped }
+            ) { $0 == .running }
         case .stop:
             await refreshUntil(
                 maxAttempts: stopMaxAttempts,
@@ -255,28 +255,35 @@ final class StatusPanelViewModel: ObservableObject {
         }
     }
 
-    private func reconcileCommandOutcome(after action: OpenClawControlAction) {
+    private func reconcileCommandOutcome(after action: OpenClawControlAction) async {
         guard let commandOutput else { return }
 
         switch action {
         case .start, .restart:
             if snapshot.runtimeStatus == .running {
                 self.commandOutput = commandOutput.overridingStatus(.success)
-            } else if snapshot.runtimeStatus == .stopped {
-                self.commandOutput = commandOutput.overridingStatus(
-                    .failed,
-                    appendingStderr: "OpenClaw did not report Running after the command completed."
-                )
             } else if commandOutput.status == .success {
-                self.commandOutput = commandOutput.overridingStatus(
-                    .success,
-                    appendingStderr: "OpenClaw status is still inconclusive after the command completed."
-                )
+                let diagnostic = await statusService.diagnosticStatus()
+                self.commandOutput = commandOutput
+                    .appendingOutput(
+                        stdout: renderedDiagnosticStdout(from: diagnostic),
+                        stderr: renderedDiagnosticStderr(from: diagnostic)
+                    )
+                    .overridingStatus(
+                        .failed,
+                        appendingStderr: "OpenClaw did not report Running within the startup window."
+                    )
             } else {
-                self.commandOutput = commandOutput.overridingStatus(
-                    .failed,
-                    appendingStderr: "OpenClaw status is still inconclusive after the command completed."
-                )
+                let diagnostic = await statusService.diagnosticStatus()
+                self.commandOutput = commandOutput
+                    .appendingOutput(
+                        stdout: renderedDiagnosticStdout(from: diagnostic),
+                        stderr: renderedDiagnosticStderr(from: diagnostic)
+                    )
+                    .overridingStatus(
+                        .failed,
+                        appendingStderr: "OpenClaw did not report Running within the startup window."
+                    )
             }
         case .stop:
             guard snapshot.runtimeStatus == .running else { return }
@@ -287,5 +294,30 @@ final class StatusPanelViewModel: ObservableObject {
         case .refresh, .openChat, .repair:
             break
         }
+    }
+
+    private func renderedDiagnosticStdout(from result: CommandResult) -> String {
+        var sections: [String] = []
+        sections.append("\n$ \(result.renderedCommand)\n")
+
+        let trimmedStdout = result.stdout.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !trimmedStdout.isEmpty {
+            sections.append(trimmedStdout + "\n")
+        }
+
+        return sections.joined()
+    }
+
+    private func renderedDiagnosticStderr(from result: CommandResult) -> String {
+        let errorText = [result.stderr, result.launchError ?? ""]
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { !$0.isEmpty }
+            .joined(separator: "\n")
+
+        guard !errorText.isEmpty else {
+            return ""
+        }
+
+        return "\n" + errorText + "\n"
     }
 }

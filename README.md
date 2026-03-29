@@ -34,7 +34,7 @@ The current menu actions map to these commands and behaviors:
 
 - `Open Chat` opens `http://127.0.0.1:18789/` with the system browser
 - `Refresh` re-reads local status
-- `Start` runs `openclaw gateway start`
+- `Start` runs `openclaw gateway start`; if the CLI explicitly says the managed service is not loaded yet, ClawNest runs `openclaw gateway install` and retries the official start
 - `Restart` runs `openclaw gateway restart`
 - `Stop` runs `openclaw gateway stop`
 - `Repair` runs `openclaw doctor --fix`

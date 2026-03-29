@@ -2,6 +2,7 @@ import Foundation
 
 protocol OpenClawStatusServing: Sendable {
     func refresh() async -> OpenClawStatusSnapshot
+    func diagnosticStatus() async -> CommandResult
 }
 
 protocol GatewayHealthChecking: Sendable {
@@ -38,13 +39,11 @@ struct OpenClawStatusService: OpenClawStatusServing {
     }
 
     func refresh() async -> OpenClawStatusSnapshot {
-        let openClawCommand = await commandResolver.resolve(defaults.openClawCommand) ?? defaults.openClawCommand
-        let executionEnvironment = await environmentProvider.executionEnvironment()
-
+        let executionContext = await resolvedExecutionContext()
         async let probeResult = runner.run(
-            command: openClawCommand,
+            command: executionContext.command,
             arguments: ["gateway", "status", "--json"],
-            environment: executionEnvironment
+            environment: executionContext.environment
         )
         async let gatewayCheck = gatewayChecker.check(url: defaults.gatewayURL)
 
@@ -54,6 +53,21 @@ struct OpenClawStatusService: OpenClawStatusServing {
             gatewayCheck: await gatewayCheck,
             checkedAt: Date()
         )
+    }
+
+    func diagnosticStatus() async -> CommandResult {
+        let executionContext = await resolvedExecutionContext()
+        return await runner.run(
+            command: executionContext.command,
+            arguments: ["gateway", "status"],
+            environment: executionContext.environment
+        )
+    }
+
+    private func resolvedExecutionContext() async -> (command: String, environment: [String: String]) {
+        let openClawCommand = await commandResolver.resolve(defaults.openClawCommand) ?? defaults.openClawCommand
+        let executionEnvironment = await environmentProvider.executionEnvironment()
+        return (command: openClawCommand, environment: executionEnvironment)
     }
 }
 

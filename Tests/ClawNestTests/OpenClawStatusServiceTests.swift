@@ -192,6 +192,26 @@ final class OpenClawStatusServiceTests: XCTestCase {
         XCTAssertEqual(snapshot.runtimeStatus, .running)
     }
 
+    func testDiagnosticStatusUsesOfficialGatewayStatusCommand() async {
+        let runner = StatusServiceRunner()
+        let service = OpenClawStatusService(
+            defaults: defaults,
+            runner: runner,
+            commandResolver: StatusStubCommandResolver(resolvedPath: "/opt/homebrew/bin/openclaw"),
+            environmentProvider: StatusStubEnvironmentProvider(environment: [
+                "PATH": "/opt/homebrew/bin:/usr/bin:/bin"
+            ]),
+            gatewayChecker: StubGatewayChecker()
+        )
+
+        _ = await service.diagnosticStatus()
+        let invocation = await runner.lastInvocation()
+
+        XCTAssertEqual(invocation?.command, "/opt/homebrew/bin/openclaw")
+        XCTAssertEqual(invocation?.arguments, ["gateway", "status"])
+        XCTAssertEqual(invocation?.environment["PATH"], "/opt/homebrew/bin:/usr/bin:/bin")
+    }
+
 private let interpreter = OpenClawStatusInterpreter()
     private let defaults = OpenClawDefaults.standard(
         homeDirectory: URL(fileURLWithPath: "/Users/tester", isDirectory: true)
