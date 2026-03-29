@@ -1,5 +1,4 @@
 import Foundation
-import Darwin
 
 struct OpenClawCommandDescriptor: Equatable, Sendable {
     let command: String
@@ -61,22 +60,19 @@ struct OpenClawControlActionService: OpenClawControlActionServing {
             Task {
                 let resolvedCommand = await commandResolver.resolve(descriptor.command) ?? descriptor.command
                 let executionEnvironment = await environmentProvider.executionEnvironment()
-                let executionPlan = await resolvedExecutionPlan(
-                    for: action,
-                    fallbackDescriptor: OpenClawCommandDescriptor(
-                        command: resolvedCommand,
-                        arguments: descriptor.arguments
-                    ),
-                    executionEnvironment: executionEnvironment
-                )
                 let startedAt = Date()
                 continuation.yield(.started(
-                    command: executionPlan.map(\.renderedCommand).joined(separator: " && "),
+                    command: OpenClawCommandDescriptor(
+                        command: resolvedCommand,
+                        arguments: descriptor.arguments
+                    ).renderedCommand,
                     startedAt: startedAt
                 ))
 
                 let result = await runExecutionPlan(
-                    executionPlan,
+                    for: action,
+                    command: resolvedCommand,
+                    initialArguments: descriptor.arguments,
                     environment: executionEnvironment,
                     startedAt: startedAt,
                     outputHandler: { chunk in
@@ -89,61 +85,55 @@ struct OpenClawControlActionService: OpenClawControlActionServing {
         }
     }
 
-    private func resolvedExecutionPlan(
-        for action: OpenClawControlAction,
-        fallbackDescriptor: OpenClawCommandDescriptor,
-        executionEnvironment: [String: String]
-    ) async -> [OpenClawCommandDescriptor] {
-        guard action == .start else {
-            return [fallbackDescriptor]
-        }
-
-        let launchctlLabel = "gui/\(getuid())/ai.openclaw.gateway"
-        let launchctlStatus = await runner.run(
-            command: "/bin/launchctl",
-            arguments: ["print", launchctlLabel],
-            environment: executionEnvironment
-        )
-
-        if launchctlStatus.exitCode == 0 {
-            return [fallbackDescriptor]
-        }
-
-        let installDescriptor = OpenClawCommandDescriptor(
-            command: fallbackDescriptor.command,
-            arguments: ["gateway", "install"]
-        )
-
-        return [installDescriptor, fallbackDescriptor]
-    }
-
     private func runExecutionPlan(
-        _ executionPlan: [OpenClawCommandDescriptor],
+        for action: OpenClawControlAction,
+        command: String,
+        initialArguments: [String],
         environment: [String: String],
         startedAt: Date,
         outputHandler: (@Sendable (CommandOutputChunk) -> Void)?
     ) async -> CommandResult {
-        let renderedCommand = executionPlan.map(\.renderedCommand).joined(separator: " && ")
+        let initialDescriptor = OpenClawCommandDescriptor(command: command, arguments: initialArguments)
+        var executionPlan = [initialDescriptor]
+        var aggregatedResults: [CommandResult] = []
         var stdout = ""
         var stderr = ""
         var launchErrors: [String] = []
         var exitCode: Int32 = 0
         var finishedAt = startedAt
 
-        for descriptor in executionPlan {
-            if executionPlan.count > 1 {
-                let banner = "$ \(descriptor.renderedCommand)\n"
-                outputHandler?(CommandOutputChunk(stream: .stdout, text: banner))
-                stdout += banner
-            }
+        let initialResult = await runStep(
+            initialDescriptor,
+            shouldShowBanner: true,
+            environment: environment,
+            outputHandler: outputHandler
+        )
+        aggregatedResults.append(initialResult)
 
-            let result = await runner.run(
-                command: descriptor.command,
-                arguments: descriptor.arguments,
+        if action == .start, requiresGatewayInstall(after: initialResult) {
+            let installDescriptor = OpenClawCommandDescriptor(command: command, arguments: ["gateway", "install"])
+            executionPlan.append(installDescriptor)
+            let installResult = await runStep(
+                installDescriptor,
+                shouldShowBanner: true,
                 environment: environment,
                 outputHandler: outputHandler
             )
+            aggregatedResults.append(installResult)
 
+            if installResult.exitCode == 0, installResult.launchError == nil {
+                executionPlan.append(initialDescriptor)
+                let retryResult = await runStep(
+                    initialDescriptor,
+                    shouldShowBanner: true,
+                    environment: environment,
+                    outputHandler: outputHandler
+                )
+                aggregatedResults.append(retryResult)
+            }
+        }
+
+        for result in aggregatedResults {
             stdout += result.stdout
             stderr += result.stderr
             if let launchError = result.launchError,
@@ -152,14 +142,12 @@ struct OpenClawControlActionService: OpenClawControlActionServing {
             }
             exitCode = result.exitCode
             finishedAt = result.finishedAt
-
-            if result.exitCode != 0 || result.launchError != nil {
-                break
-            }
         }
 
         return CommandResult(
-            command: renderedCommand,
+            command: executionPlan
+                .map { "$ \($0.renderedCommand)" }
+                .joined(separator: "\n"),
             arguments: [],
             exitCode: exitCode,
             stdout: stdout,
@@ -168,5 +156,47 @@ struct OpenClawControlActionService: OpenClawControlActionServing {
             startedAt: startedAt,
             finishedAt: finishedAt
         )
+    }
+
+    private func runStep(
+        _ descriptor: OpenClawCommandDescriptor,
+        shouldShowBanner: Bool,
+        environment: [String: String],
+        outputHandler: (@Sendable (CommandOutputChunk) -> Void)?
+    ) async -> CommandResult {
+        let banner = shouldShowBanner ? "$ \(descriptor.renderedCommand)\n" : ""
+        if shouldShowBanner {
+            outputHandler?(CommandOutputChunk(stream: .stdout, text: banner))
+        }
+
+        let result = await runner.run(
+            command: descriptor.command,
+            arguments: descriptor.arguments,
+            environment: environment,
+            outputHandler: outputHandler
+        )
+
+        guard !banner.isEmpty else { return result }
+        return CommandResult(
+            command: result.command,
+            arguments: result.arguments,
+            exitCode: result.exitCode,
+            stdout: banner + result.stdout,
+            stderr: result.stderr,
+            launchError: result.launchError,
+            startedAt: result.startedAt,
+            finishedAt: result.finishedAt
+        )
+    }
+
+    private func requiresGatewayInstall(after result: CommandResult) -> Bool {
+        let text = [result.stdout, result.stderr, result.launchError ?? ""]
+            .joined(separator: "\n")
+            .lowercased()
+
+        return text.contains("gateway service not loaded")
+            || text.contains("service not loaded")
+            || text.contains("start with: openclaw gateway install")
+            || text.contains("not installed")
     }
 }

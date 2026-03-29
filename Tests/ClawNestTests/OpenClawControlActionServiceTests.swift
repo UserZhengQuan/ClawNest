@@ -44,14 +44,17 @@ final class OpenClawControlActionServiceTests: XCTestCase {
         XCTAssertEqual(invocation?.environment["PATH"], "/opt/homebrew/bin:/usr/bin:/bin")
     }
 
-    func testStartUsesGatewayInstallWhenLaunchAgentIsNotLoaded() async {
+    func testStartRetriesWithGatewayInstallWhenServiceIsNotLoaded() async {
         let runner = ActionServiceRunner(results: [
             CommandResult(
-                command: "/bin/launchctl",
-                arguments: ["print", "gui/501/ai.openclaw.gateway"],
-                exitCode: 113,
-                stdout: "",
-                stderr: "service not loaded",
+                command: "/opt/homebrew/bin/openclaw",
+                arguments: ["gateway", "start"],
+                exitCode: 0,
+                stdout: """
+                Gateway service not loaded.
+                Start with: openclaw gateway install
+                """,
+                stderr: "",
                 launchError: nil
             ),
             CommandResult(
@@ -87,27 +90,19 @@ final class OpenClawControlActionServiceTests: XCTestCase {
 
         let invocations = await runner.invocations()
         XCTAssertEqual(invocations.map(\.command), [
-            "/bin/launchctl",
+            "/opt/homebrew/bin/openclaw",
             "/opt/homebrew/bin/openclaw",
             "/opt/homebrew/bin/openclaw"
         ])
         XCTAssertEqual(invocations.map(\.arguments), [
-            ["print", "gui/501/ai.openclaw.gateway"],
+            ["gateway", "start"],
             ["gateway", "install"],
             ["gateway", "start"]
         ])
     }
 
-    func testStartUsesGatewayStartWhenLaunchAgentIsLoaded() async {
+    func testStartUsesSingleGatewayStartWhenInitialCommandSucceeds() async {
         let runner = ActionServiceRunner(results: [
-            CommandResult(
-                command: "/bin/launchctl",
-                arguments: ["print", "gui/501/ai.openclaw.gateway"],
-                exitCode: 0,
-                stdout: "state = running",
-                stderr: "",
-                launchError: nil
-            ),
             CommandResult(
                 command: "/opt/homebrew/bin/openclaw",
                 arguments: ["gateway", "start"],
@@ -132,8 +127,9 @@ final class OpenClawControlActionServiceTests: XCTestCase {
         for await _ in stream {}
 
         let invocations = await runner.invocations()
-        XCTAssertEqual(invocations.dropFirst().first?.command, "/opt/homebrew/bin/openclaw")
-        XCTAssertEqual(invocations.dropFirst().first?.arguments, ["gateway", "start"])
+        XCTAssertEqual(invocations.count, 1)
+        XCTAssertEqual(invocations.first?.command, "/opt/homebrew/bin/openclaw")
+        XCTAssertEqual(invocations.first?.arguments, ["gateway", "start"])
     }
 
     func testFinishedRecordMarksStartAsFailedWhenServiceIsNotLoaded() {
@@ -158,11 +154,14 @@ final class OpenClawControlActionServiceTests: XCTestCase {
     func testStartDoesNotAttemptGatewayStartWhenInstallFails() async {
         let runner = ActionServiceRunner(results: [
             CommandResult(
-                command: "/bin/launchctl",
-                arguments: ["print", "gui/501/ai.openclaw.gateway"],
-                exitCode: 113,
-                stdout: "",
-                stderr: "service not loaded",
+                command: "/opt/homebrew/bin/openclaw",
+                arguments: ["gateway", "start"],
+                exitCode: 0,
+                stdout: """
+                Gateway service not loaded.
+                Start with: openclaw gateway install
+                """,
+                stderr: "",
                 launchError: nil
             ),
             CommandResult(
@@ -191,6 +190,36 @@ final class OpenClawControlActionServiceTests: XCTestCase {
         let invocations = await runner.invocations()
         XCTAssertEqual(invocations.count, 2)
         XCTAssertEqual(invocations.last?.arguments, ["gateway", "install"])
+    }
+
+    func testStartDoesNotAttemptGatewayInstallForOtherFailures() async {
+        let runner = ActionServiceRunner(results: [
+            CommandResult(
+                command: "/opt/homebrew/bin/openclaw",
+                arguments: ["gateway", "start"],
+                exitCode: 1,
+                stdout: "",
+                stderr: "permission denied",
+                launchError: nil
+            )
+        ])
+        let service = OpenClawControlActionService(
+            runner: runner,
+            commandResolver: StubCommandResolver(resolvedPath: "/opt/homebrew/bin/openclaw"),
+            environmentProvider: StubEnvironmentProvider(environment: [
+                "PATH": "/opt/homebrew/bin:/usr/bin:/bin"
+            ])
+        )
+
+        guard let stream = service.execute(.start) else {
+            return XCTFail("Expected executable stream")
+        }
+
+        for await _ in stream {}
+
+        let invocations = await runner.invocations()
+        XCTAssertEqual(invocations.count, 1)
+        XCTAssertEqual(invocations.first?.arguments, ["gateway", "start"])
     }
 }
 

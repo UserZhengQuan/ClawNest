@@ -235,11 +235,14 @@ final class StatusPanelViewModel: ObservableObject {
 
         switch action {
         case .start, .restart:
-            guard snapshot.runtimeStatus != .running else { return }
-            self.commandOutput = commandOutput.overridingStatus(
-                .failed,
-                appendingStderr: "OpenClaw did not report Running after the command completed."
-            )
+            if snapshot.runtimeStatus == .running {
+                self.commandOutput = commandOutput.overridingStatus(.success)
+            } else {
+                self.commandOutput = commandOutput.overridingStatus(
+                    .failed,
+                    appendingStderr: "OpenClaw did not report Running after the command completed."
+                )
+            }
         case .stop:
             guard snapshot.runtimeStatus == .running else { return }
             self.commandOutput = commandOutput.overridingStatus(
