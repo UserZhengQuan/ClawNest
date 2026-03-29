@@ -1,4 +1,5 @@
 import Foundation
+import Darwin
 
 struct OpenClawCommandDescriptor: Equatable, Sendable {
     let command: String
@@ -60,15 +61,23 @@ struct OpenClawControlActionService: OpenClawControlActionServing {
             Task {
                 let resolvedCommand = await commandResolver.resolve(descriptor.command) ?? descriptor.command
                 let executionEnvironment = await environmentProvider.executionEnvironment()
+                let executionDescriptor = await resolvedDescriptor(
+                    for: action,
+                    fallbackDescriptor: OpenClawCommandDescriptor(
+                        command: resolvedCommand,
+                        arguments: descriptor.arguments
+                    ),
+                    executionEnvironment: executionEnvironment
+                )
                 let startedAt = Date()
                 continuation.yield(.started(
-                    command: ([resolvedCommand] + descriptor.arguments).joined(separator: " "),
+                    command: executionDescriptor.renderedCommand,
                     startedAt: startedAt
                 ))
 
                 let result = await runner.run(
-                    command: resolvedCommand,
-                    arguments: descriptor.arguments,
+                    command: executionDescriptor.command,
+                    arguments: executionDescriptor.arguments,
                     environment: executionEnvironment,
                     outputHandler: { chunk in
                         continuation.yield(.output(chunk))
@@ -78,5 +87,31 @@ struct OpenClawControlActionService: OpenClawControlActionServing {
                 continuation.finish()
             }
         }
+    }
+
+    private func resolvedDescriptor(
+        for action: OpenClawControlAction,
+        fallbackDescriptor: OpenClawCommandDescriptor,
+        executionEnvironment: [String: String]
+    ) async -> OpenClawCommandDescriptor {
+        guard action == .start else {
+            return fallbackDescriptor
+        }
+
+        let launchctlLabel = "gui/\(getuid())/ai.openclaw.gateway"
+        let launchctlStatus = await runner.run(
+            command: "/bin/launchctl",
+            arguments: ["print", launchctlLabel],
+            environment: executionEnvironment
+        )
+
+        if launchctlStatus.exitCode == 0 {
+            return fallbackDescriptor
+        }
+
+        return OpenClawCommandDescriptor(
+            command: fallbackDescriptor.command,
+            arguments: ["gateway", "install"]
+        )
     }
 }

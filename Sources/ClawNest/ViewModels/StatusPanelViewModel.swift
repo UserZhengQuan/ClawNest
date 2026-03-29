@@ -181,8 +181,7 @@ final class StatusPanelViewModel: ObservableObject {
     }
 
     private func runCommandAction(_ action: OpenClawControlAction) async {
-        let executableAction = executableAction(for: action)
-        guard let stream = actionService.execute(executableAction) else { return }
+        guard let stream = actionService.execute(action) else { return }
 
         for await event in stream {
             switch event {
@@ -204,36 +203,30 @@ final class StatusPanelViewModel: ObservableObject {
         reconcileCommandOutcome(after: action)
     }
 
-    private func executableAction(for requestedAction: OpenClawControlAction) -> OpenClawControlAction {
-        switch requestedAction {
-        case .restart where snapshot.runtimeStatus != .running:
-            return .start
-        default:
-            return requestedAction
-        }
-    }
-
     private func refreshAfterCommand(_ action: OpenClawControlAction) async {
         switch action {
         case .start, .restart:
-            await refreshUntil { $0 == .running }
+            await refreshUntil(maxAttempts: 20, intervalMilliseconds: 1_000) { $0 == .running }
         case .stop:
-            await refreshUntil { $0 != .running }
+            await refreshUntil(maxAttempts: 12, intervalMilliseconds: 500) { $0 != .running }
         case .refresh, .openChat, .repair:
             await refresh()
         }
     }
 
-    private func refreshUntil(_ isSatisfied: (OpenClawRuntimeStatus) -> Bool) async {
-        let attempts = 8
-        for attempt in 0 ..< attempts {
+    private func refreshUntil(
+        maxAttempts: Int,
+        intervalMilliseconds: UInt64,
+        _ isSatisfied: (OpenClawRuntimeStatus) -> Bool
+    ) async {
+        for attempt in 0 ..< maxAttempts {
             await refresh()
             if isSatisfied(snapshot.runtimeStatus) {
                 return
             }
 
-            guard attempt < attempts - 1 else { return }
-            try? await Task.sleep(for: .milliseconds(500))
+            guard attempt < maxAttempts - 1 else { return }
+            try? await Task.sleep(for: .milliseconds(intervalMilliseconds))
         }
     }
 

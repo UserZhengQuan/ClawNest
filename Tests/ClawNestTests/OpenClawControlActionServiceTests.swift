@@ -44,6 +44,82 @@ final class OpenClawControlActionServiceTests: XCTestCase {
         XCTAssertEqual(invocation?.environment["PATH"], "/opt/homebrew/bin:/usr/bin:/bin")
     }
 
+    func testStartUsesGatewayInstallWhenLaunchAgentIsNotLoaded() async {
+        let runner = ActionServiceRunner(results: [
+            CommandResult(
+                command: "/bin/launchctl",
+                arguments: ["print", "gui/501/ai.openclaw.gateway"],
+                exitCode: 113,
+                stdout: "",
+                stderr: "service not loaded",
+                launchError: nil
+            ),
+            CommandResult(
+                command: "/opt/homebrew/bin/openclaw",
+                arguments: ["gateway", "install"],
+                exitCode: 0,
+                stdout: "Installed LaunchAgent",
+                stderr: "",
+                launchError: nil
+            )
+        ])
+        let service = OpenClawControlActionService(
+            runner: runner,
+            commandResolver: StubCommandResolver(resolvedPath: "/opt/homebrew/bin/openclaw"),
+            environmentProvider: StubEnvironmentProvider(environment: [
+                "PATH": "/opt/homebrew/bin:/usr/bin:/bin"
+            ])
+        )
+
+        guard let stream = service.execute(.start) else {
+            return XCTFail("Expected executable stream")
+        }
+
+        for await _ in stream {}
+
+        let invocations = await runner.invocations()
+        XCTAssertEqual(invocations.dropFirst().first?.command, "/opt/homebrew/bin/openclaw")
+        XCTAssertEqual(invocations.dropFirst().first?.arguments, ["gateway", "install"])
+    }
+
+    func testStartUsesGatewayStartWhenLaunchAgentIsLoaded() async {
+        let runner = ActionServiceRunner(results: [
+            CommandResult(
+                command: "/bin/launchctl",
+                arguments: ["print", "gui/501/ai.openclaw.gateway"],
+                exitCode: 0,
+                stdout: "state = running",
+                stderr: "",
+                launchError: nil
+            ),
+            CommandResult(
+                command: "/opt/homebrew/bin/openclaw",
+                arguments: ["gateway", "start"],
+                exitCode: 0,
+                stdout: "ok",
+                stderr: "",
+                launchError: nil
+            )
+        ])
+        let service = OpenClawControlActionService(
+            runner: runner,
+            commandResolver: StubCommandResolver(resolvedPath: "/opt/homebrew/bin/openclaw"),
+            environmentProvider: StubEnvironmentProvider(environment: [
+                "PATH": "/opt/homebrew/bin:/usr/bin:/bin"
+            ])
+        )
+
+        guard let stream = service.execute(.start) else {
+            return XCTFail("Expected executable stream")
+        }
+
+        for await _ in stream {}
+
+        let invocations = await runner.invocations()
+        XCTAssertEqual(invocations.dropFirst().first?.command, "/opt/homebrew/bin/openclaw")
+        XCTAssertEqual(invocations.dropFirst().first?.arguments, ["gateway", "start"])
+    }
+
     func testFinishedRecordMarksStartAsFailedWhenServiceIsNotLoaded() {
         let record = CommandExecutionRecord.finished(
             action: .start,
@@ -81,12 +157,17 @@ private struct StubEnvironmentProvider: CommandEnvironmentProviding {
 }
 
 private actor ActionServiceRunner: CommandRunning {
-    private var invocation: Invocation?
+    private var recordedInvocations: [Invocation] = []
+    private var queuedResults: [CommandResult]
 
     struct Invocation {
         let command: String
         let arguments: [String]
         let environment: [String: String]
+    }
+
+    init(results: [CommandResult] = []) {
+        self.queuedResults = results
     }
 
     func run(
@@ -95,7 +176,10 @@ private actor ActionServiceRunner: CommandRunning {
         environment: [String : String],
         outputHandler: (@Sendable (CommandOutputChunk) -> Void)?
     ) async -> CommandResult {
-        invocation = Invocation(command: command, arguments: arguments, environment: environment)
+        recordedInvocations.append(Invocation(command: command, arguments: arguments, environment: environment))
+        if !queuedResults.isEmpty {
+            return queuedResults.removeFirst()
+        }
         return CommandResult(
             command: command,
             arguments: arguments,
@@ -107,6 +191,10 @@ private actor ActionServiceRunner: CommandRunning {
     }
 
     func lastInvocation() -> Invocation? {
-        invocation
+        recordedInvocations.last
+    }
+
+    func invocations() -> [Invocation] {
+        recordedInvocations
     }
 }
