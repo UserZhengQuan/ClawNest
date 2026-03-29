@@ -9,7 +9,7 @@ final class OpenClawControlActionServiceTests: XCTestCase {
         )
         let service = OpenClawControlActionService(defaults: defaults, runner: ProcessCommandRunner())
 
-        XCTAssertEqual(service.descriptor(for: .start)?.renderedCommand, "openclaw gateway start")
+        XCTAssertEqual(service.descriptor(for: .start)?.renderedCommand, "openclaw gateway install")
         XCTAssertEqual(service.descriptor(for: .restart)?.renderedCommand, "openclaw gateway restart")
         XCTAssertEqual(service.descriptor(for: .stop)?.renderedCommand, "openclaw gateway stop")
         XCTAssertEqual(service.descriptor(for: .repair)?.renderedCommand, "openclaw doctor --fix")
@@ -42,6 +42,25 @@ final class OpenClawControlActionServiceTests: XCTestCase {
         XCTAssertEqual(invocation?.command, "/opt/homebrew/bin/openclaw")
         XCTAssertEqual(invocation?.arguments, ["gateway", "stop"])
         XCTAssertEqual(invocation?.environment["PATH"], "/opt/homebrew/bin:/usr/bin:/bin")
+    }
+
+    func testFinishedRecordMarksStartAsFailedWhenServiceIsNotLoaded() {
+        let record = CommandExecutionRecord.finished(
+            action: .start,
+            result: CommandResult(
+                command: "openclaw",
+                arguments: ["gateway", "start"],
+                exitCode: 0,
+                stdout: """
+                Gateway service not loaded.
+                Start with: openclaw gateway install
+                """,
+                stderr: "",
+                launchError: nil
+            )
+        )
+
+        XCTAssertEqual(record.status, .failed)
     }
 }
 

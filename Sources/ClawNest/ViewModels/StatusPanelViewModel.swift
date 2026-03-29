@@ -181,7 +181,8 @@ final class StatusPanelViewModel: ObservableObject {
     }
 
     private func runCommandAction(_ action: OpenClawControlAction) async {
-        guard let stream = actionService.execute(action) else { return }
+        let executableAction = executableAction(for: action)
+        guard let stream = actionService.execute(executableAction) else { return }
 
         for await event in stream {
             switch event {
@@ -199,6 +200,61 @@ final class StatusPanelViewModel: ObservableObject {
             }
         }
 
-        await refresh()
+        await refreshAfterCommand(action)
+        reconcileCommandOutcome(after: action)
+    }
+
+    private func executableAction(for requestedAction: OpenClawControlAction) -> OpenClawControlAction {
+        switch requestedAction {
+        case .restart where snapshot.runtimeStatus != .running:
+            return .start
+        default:
+            return requestedAction
+        }
+    }
+
+    private func refreshAfterCommand(_ action: OpenClawControlAction) async {
+        switch action {
+        case .start, .restart:
+            await refreshUntil { $0 == .running }
+        case .stop:
+            await refreshUntil { $0 != .running }
+        case .refresh, .openChat, .repair:
+            await refresh()
+        }
+    }
+
+    private func refreshUntil(_ isSatisfied: (OpenClawRuntimeStatus) -> Bool) async {
+        let attempts = 8
+        for attempt in 0 ..< attempts {
+            await refresh()
+            if isSatisfied(snapshot.runtimeStatus) {
+                return
+            }
+
+            guard attempt < attempts - 1 else { return }
+            try? await Task.sleep(for: .milliseconds(500))
+        }
+    }
+
+    private func reconcileCommandOutcome(after action: OpenClawControlAction) {
+        guard let commandOutput else { return }
+
+        switch action {
+        case .start, .restart:
+            guard snapshot.runtimeStatus != .running else { return }
+            self.commandOutput = commandOutput.overridingStatus(
+                .failed,
+                appendingStderr: "OpenClaw did not report Running after the command completed."
+            )
+        case .stop:
+            guard snapshot.runtimeStatus == .running else { return }
+            self.commandOutput = commandOutput.overridingStatus(
+                .failed,
+                appendingStderr: "OpenClaw still reported Running after the stop command completed."
+            )
+        case .refresh, .openChat, .repair:
+            break
+        }
     }
 }

@@ -149,7 +149,7 @@ struct CommandExecutionRecord: Equatable, Sendable {
         CommandExecutionRecord(
             action: action,
             command: result.renderedCommand,
-            status: result.exitCode == 0 && result.launchError == nil ? .success : .failed,
+            status: executionStatus(action: action, result: result),
             startedAt: result.startedAt,
             finishedAt: result.finishedAt,
             exitCode: result.exitCode,
@@ -198,5 +198,58 @@ struct CommandExecutionRecord: Equatable, Sendable {
             .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
             .filter { !$0.isEmpty }
             .joined(separator: "\n")
+    }
+
+    func overridingStatus(
+        _ status: CommandExecutionStatus,
+        appendingStderr note: String? = nil
+    ) -> CommandExecutionRecord {
+        let appendedStderr: String
+        if let note, !note.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            appendedStderr = [stderr, note]
+                .filter { !$0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
+                .joined(separator: stderr.isEmpty ? "" : "\n")
+        } else {
+            appendedStderr = stderr
+        }
+
+        return CommandExecutionRecord(
+            action: action,
+            command: command,
+            status: status,
+            startedAt: startedAt,
+            finishedAt: finishedAt,
+            exitCode: exitCode,
+            stdout: stdout,
+            stderr: appendedStderr,
+            launchError: launchError
+        )
+    }
+
+    private static func executionStatus(
+        action: OpenClawControlAction,
+        result: CommandResult
+    ) -> CommandExecutionStatus {
+        guard result.exitCode == 0, result.launchError == nil else {
+            return .failed
+        }
+
+        let combinedOutput = [result.stdout, result.stderr]
+            .joined(separator: "\n")
+            .lowercased()
+
+        switch action {
+        case .start, .restart:
+            if combinedOutput.contains("gateway service not loaded")
+                || combinedOutput.contains("start with: openclaw gateway install")
+                || combinedOutput.contains("start with: launchctl bootstrap")
+                || combinedOutput.contains("not installed") {
+                return .failed
+            }
+        case .refresh, .openChat, .stop, .repair:
+            break
+        }
+
+        return .success
     }
 }
