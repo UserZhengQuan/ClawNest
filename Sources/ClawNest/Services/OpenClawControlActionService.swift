@@ -61,7 +61,7 @@ struct OpenClawControlActionService: OpenClawControlActionServing {
             Task {
                 let resolvedCommand = await commandResolver.resolve(descriptor.command) ?? descriptor.command
                 let executionEnvironment = await environmentProvider.executionEnvironment()
-                let executionDescriptor = await resolvedDescriptor(
+                let executionPlan = await resolvedExecutionPlan(
                     for: action,
                     fallbackDescriptor: OpenClawCommandDescriptor(
                         command: resolvedCommand,
@@ -71,14 +71,14 @@ struct OpenClawControlActionService: OpenClawControlActionServing {
                 )
                 let startedAt = Date()
                 continuation.yield(.started(
-                    command: executionDescriptor.renderedCommand,
+                    command: executionPlan.map(\.renderedCommand).joined(separator: " && "),
                     startedAt: startedAt
                 ))
 
-                let result = await runner.run(
-                    command: executionDescriptor.command,
-                    arguments: executionDescriptor.arguments,
+                let result = await runExecutionPlan(
+                    executionPlan,
                     environment: executionEnvironment,
+                    startedAt: startedAt,
                     outputHandler: { chunk in
                         continuation.yield(.output(chunk))
                     }
@@ -89,13 +89,13 @@ struct OpenClawControlActionService: OpenClawControlActionServing {
         }
     }
 
-    private func resolvedDescriptor(
+    private func resolvedExecutionPlan(
         for action: OpenClawControlAction,
         fallbackDescriptor: OpenClawCommandDescriptor,
         executionEnvironment: [String: String]
-    ) async -> OpenClawCommandDescriptor {
+    ) async -> [OpenClawCommandDescriptor] {
         guard action == .start else {
-            return fallbackDescriptor
+            return [fallbackDescriptor]
         }
 
         let launchctlLabel = "gui/\(getuid())/ai.openclaw.gateway"
@@ -106,12 +106,67 @@ struct OpenClawControlActionService: OpenClawControlActionServing {
         )
 
         if launchctlStatus.exitCode == 0 {
-            return fallbackDescriptor
+            return [fallbackDescriptor]
         }
 
-        return OpenClawCommandDescriptor(
+        let installDescriptor = OpenClawCommandDescriptor(
             command: fallbackDescriptor.command,
             arguments: ["gateway", "install"]
+        )
+
+        return [installDescriptor, fallbackDescriptor]
+    }
+
+    private func runExecutionPlan(
+        _ executionPlan: [OpenClawCommandDescriptor],
+        environment: [String: String],
+        startedAt: Date,
+        outputHandler: (@Sendable (CommandOutputChunk) -> Void)?
+    ) async -> CommandResult {
+        let renderedCommand = executionPlan.map(\.renderedCommand).joined(separator: " && ")
+        var stdout = ""
+        var stderr = ""
+        var launchErrors: [String] = []
+        var exitCode: Int32 = 0
+        var finishedAt = startedAt
+
+        for descriptor in executionPlan {
+            if executionPlan.count > 1 {
+                let banner = "$ \(descriptor.renderedCommand)\n"
+                outputHandler?(CommandOutputChunk(stream: .stdout, text: banner))
+                stdout += banner
+            }
+
+            let result = await runner.run(
+                command: descriptor.command,
+                arguments: descriptor.arguments,
+                environment: environment,
+                outputHandler: outputHandler
+            )
+
+            stdout += result.stdout
+            stderr += result.stderr
+            if let launchError = result.launchError,
+               !launchError.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                launchErrors.append(launchError)
+            }
+            exitCode = result.exitCode
+            finishedAt = result.finishedAt
+
+            if result.exitCode != 0 || result.launchError != nil {
+                break
+            }
+        }
+
+        return CommandResult(
+            command: renderedCommand,
+            arguments: [],
+            exitCode: exitCode,
+            stdout: stdout,
+            stderr: stderr,
+            launchError: launchErrors.isEmpty ? nil : launchErrors.joined(separator: "\n"),
+            startedAt: startedAt,
+            finishedAt: finishedAt
         )
     }
 }

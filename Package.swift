@@ -63,6 +63,7 @@ let package = Package(
                 "ShellCommandEnvironmentProviderTests.swift",
                 "ShellCommandResolverTests.swift",
                 "OpenClawStatusServiceTests.swift",
+                "StatusPanelViewModelTests.swift",
                 "UserShellProviderTests.swift"
             ]
         )
